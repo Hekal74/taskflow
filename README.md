@@ -16,14 +16,14 @@ A minimal but real task management system. Users can register, log in, create pr
 | Auth         | Mock JWT (localStorage) |
 
 
-**Mock API approach**: MSW intercepts real `fetch()` calls at the network level. The same `api.js` file works against both MSW (dev) and a real backend (production) — no code changes needed.
+**Mock API approach**: MSW intercepts real `fetch()` calls at the network level. The same `api.ts` file works against both MSW (dev) and a real backend (production) — no code changes needed.
 
 ---
 
 ## Getting Started
 
 ### Prerequisites
-- Node.js 18+
+- Node.ts 18+
 - npm
 
 ### Install
@@ -219,42 +219,12 @@ Response 200: { /* updated task */ }
 Response 204: No Content
 ```
 
-## Project Structure
-
-```
-src/
-  api/
-    api.js               # Fetch client — calls BASE_URL, works with MSW + real backend
-  mocks/
-    handlers.js          # MSW request handlers (full mock API)
-    browser.js           # MSW browser worker setup
-  components/
-    ProtectedRoute.jsx   # Auth guard
-    ThemePicker.jsx      # Theme switcher
-    ThemePicker.css
-  context/
-    ThemeContext.jsx     # Global theme state
-  pages/
-    Login.jsx
-    Register.jsx
-    Dashboard.jsx
-    Project.jsx
-    AuthPage.css
-    dashboard.css
-    project.css
-  App.jsx
-  main.jsx               # Starts MSW before mounting React
-  index.css
-```
-
----
-
 ## Connecting a Real Backend
 
-MSW only runs in development (`import.meta.env.PROD` check in `main.jsx`). In production builds, all fetch calls in `api.js` hit the real server directly — no changes needed.
+MSW only runs in development (`import.meta.env.PROD` check in `main.tsx`). In production builds, all fetch calls in `api.ts` hit the real server directly — no changes needed.
 
 ```js
-// main.jsx
+// main.tsx
 async function enableMocking() {
   if (import.meta.env.PROD) return; // ← MSW skipped in production
   const { worker } = await import("./mocks/browser");
