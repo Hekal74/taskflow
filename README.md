@@ -8,7 +8,7 @@ A minimal but real task management system. Users can register, log in, create pr
 
 | Layer        | Technology |
 |-------------|-----------|
-| Frontend     | React 18 (Vite) |
+| Frontend     | React 19 (Vite) |
 | Routing      | React Router v6 |
 | Mock API     | MSW (Mock Service Worker) |
 | Styling      | Custom CSS (no external UI libraries) |
