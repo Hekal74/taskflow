@@ -28,9 +28,11 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.4.0",
     "jest": "^30.5.2",
+    "jiti": "^2.7.0",
     "msw": "^2.13.2",
     "ts-jest": "^29.4.15",
     "typescript": "^5.4.5",
+    "typescript-eslint": "^8.72.1",
     "vite": "^8.0.4"
   },
   "msw": {
