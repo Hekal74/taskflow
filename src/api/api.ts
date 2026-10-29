@@ -46,6 +46,10 @@ type Project = {
   task_count?: number;
   done_count?: number;
 };
+type CreateProjectData = {
+  name: string;
+  description?: string;
+};
 
 class ApiError extends Error {
   constructor(
@@ -299,13 +303,10 @@ export const fetchProjects = async (): Promise<Project[]> => {
   throw new Error('TODO: Implement fetchProjects()');
 };
 
-export const createProject = async (data: unknown): Promise<unknown> => {
-  // TODO:
-  // Add correct TypeScript types.
-  //
-  // POST /projects
-
-  throw new Error('TODO: Implement createProject()');
+export const createProject = async (
+  data: CreateProjectData,
+): Promise<Project> => {
+  return post<Project>('/projects', data);
 };
 
 export const fetchProject = async (id: string): Promise<unknown> => {

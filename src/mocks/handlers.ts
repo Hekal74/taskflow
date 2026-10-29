@@ -582,26 +582,39 @@ export const handlers = [
 
   // POST /projects
   http.post(`${BASE_URL}/projects`, async ({ request }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Read CreateProjectRequest.
-    // 3. Validate project name.
-    // 4. Trim name and description.
-    // 5. Create Project.
-    // 6. Set owner_id to current user's ID.
-    // 7. Set created_at.
-    // 8. Add project to db.projects.
-    // 9. Return created project.
-    //
-    // Success HTTP status: 201.
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
+    if (!user) {
+      return unauthorized();
+    }
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement create project' },
-      { status: 501 },
-    );
+    // 2. Read the request body
+    const body = (await request.json()) as CreateProjectRequest;
+
+    // 3. Validate the project name
+    const name = body.name?.trim();
+
+    if (!name) {
+      return validationError({
+        name: 'Project name is required',
+      });
+    }
+
+    // 4. Create the project
+    const project: Project = {
+      id: createId(),
+      name,
+      description: body.description?.trim() ?? '',
+      owner_id: user.id,
+      created_at: getCurrentDate(),
+    };
+
+    // 5. Save it in the mock database
+    db.projects.push(project);
+
+    // 6. Return the created project
+    return HttpResponse.json(project, { status: 201 });
   }),
 
   // GET /projects/:id
