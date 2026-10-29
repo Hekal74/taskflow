@@ -83,12 +83,7 @@ interface CreateTaskRequest {
 type UpdateTaskRequest = Partial<
   Pick<
     TaskRecord,
-    | 'title'
-    | 'description'
-    | 'status'
-    | 'priority'
-    | 'assignee_id'
-    | 'due_date'
+    'title' | 'description' | 'status' | 'priority' | 'assignee_id' | 'due_date'
   >
 >;
 
@@ -219,15 +214,13 @@ const createId = (): string => {
   //
   // Hint:
   // You can use Date.now() + a random value.
-
-  throw new Error('TODO: Implement createId()');
+  return `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
 const getCurrentDate = (): string => {
   // TODO:
   // Return the current date/time in ISO format.
-
-  throw new Error('TODO: Implement getCurrentDate()');
+  return new Date().toISOString();
 };
 
 const makeToken = (userId: string): string => {
@@ -243,9 +236,12 @@ const makeToken = (userId: string): string => {
   // Hint:
   // Use JSON.stringify() and btoa().
 
-  void userId;
+  const payload = {
+    userId,
+    exp: Date.now() + 24 * 60 * 60 * 1000,
+  };
 
-  throw new Error('TODO: Implement makeToken()');
+  return btoa(JSON.stringify(payload));
 };
 
 const getPublicUser = (user: User): PublicUser => {
@@ -255,9 +251,10 @@ const getPublicUser = (user: User): PublicUser => {
   // IMPORTANT:
   // Never expose the user's password.
 
-  void user;
+  //not returning the password field to ensure security and privacy of user data
+  const { id, name, email } = user;
 
-  throw new Error('TODO: Implement getPublicUser()');
+  return { id, name, email };
 };
 
 const getUser = (request: Request): User | null => {
@@ -275,10 +272,31 @@ const getUser = (request: Request): User | null => {
   //
   // IMPORTANT:
   // Invalid tokens must not crash the application.
+  try {
+    const authorization = request.headers.get('Authorization');
+    const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
 
-  void request;
+    if (!token) {
+      return null;
+    }
 
-  return null;
+    const payload = JSON.parse(atob(token)) as {
+      userId?: string;
+      exp?: number;
+    };
+
+    if (
+      !payload.userId ||
+      typeof payload.exp !== 'number' ||
+      payload.exp <= Date.now()
+    ) {
+      return null;
+    }
+
+    return db.users.find((user) => user.id === payload.userId) ?? null;
+  } catch {
+    return null;
+  }
 };
 
 const unauthorized = () => {
@@ -289,10 +307,7 @@ const unauthorized = () => {
   //
   // HTTP status: 401
 
-  return HttpResponse.json(
-    { error: 'TODO' },
-    { status: 501 },
-  );
+  return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 };
 
 const notFound = () => {
@@ -303,10 +318,7 @@ const notFound = () => {
   //
   // HTTP status: 404
 
-  return HttpResponse.json(
-    { error: 'TODO' },
-    { status: 501 },
-  );
+  return HttpResponse.json({ error: 'not found' }, { status: 404 });
 };
 
 const forbidden = () => {
@@ -317,10 +329,7 @@ const forbidden = () => {
   //
   // HTTP status: 403
 
-  return HttpResponse.json(
-    { error: 'TODO' },
-    { status: 501 },
-  );
+  return HttpResponse.json({ error: 'forbidden' }, { status: 403 });
 };
 
 const validationError = (fields: ValidationFields) => {
@@ -334,17 +343,13 @@ const validationError = (fields: ValidationFields) => {
   //
   // HTTP status: 400
 
-  void fields;
-
   return HttpResponse.json(
-    { error: 'TODO' },
-    { status: 501 },
+    { error: 'validation failed', fields },
+    { status: 400 },
   );
 };
 
-const getParam = (
-  param: string | readonly string[] | undefined,
-): string => {
+const getParam = (param: string | readonly string[] | undefined): string => {
   // TODO:
   // MSW route params may contain different value types.
   //
@@ -383,31 +388,99 @@ export const handlers = [
     //
     // Success HTTP status: 201.
 
-    void request;
+    const body = (await request.json()) as {
+      name?: string;
+      email?: string;
+      password?: string;
+    };
+    const name = body.name?.trim() ?? '';
+    const email = body.email?.trim() ?? '';
+    const password = body.password ?? '';
+
+    const fields: ValidationFields = {};
+
+    if (!name) {
+      fields.name = 'Name is required';
+    }
+
+    if (!email) {
+      fields.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      fields.email = 'Enter a valid email address';
+    }
+
+    if (!password.trim()) {
+      fields.password = 'Password is required';
+    }
+
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
+    const existingUser = db.users.find(
+      (user) => user.email.toLowerCase() === email.toLowerCase(),
+    );
+
+    if (existingUser) {
+      return HttpResponse.json(
+        { error: 'Email already registered' },
+        { status: 409 },
+      );
+    }
+
+    const user: User = {
+      id: createId(),
+      name,
+      email,
+      password,
+    };
+
+    db.users.push(user);
+
+    const token = makeToken(user.id);
 
     return HttpResponse.json(
-      { error: 'TODO: Implement registration' },
-      { status: 501 },
+      {
+        token,
+        user: getPublicUser(user),
+      },
+      { status: 201 },
     );
   }),
 
   // POST /auth/login
   http.post(`${BASE_URL}/auth/login`, async ({ request }) => {
-    // TODO:
-    //
-    // 1. Read LoginRequest from body.
-    // 2. Find user by email and password.
-    // 3. Email comparison should be case-insensitive.
-    // 4. Return 401 for invalid credentials.
-    // 5. Generate authentication token.
-    // 6. Return token + PublicUser.
+    const body = (await request.json()) as LoginRequest;
 
-    void request;
+    const email = body.email?.trim() ?? '';
+    const password = body.password ?? '';
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement login' },
-      { status: 501 },
+    if (!email || !password) {
+      return validationError({
+        ...(!email && { email: 'Email is required' }),
+        ...(!password && { password: 'Password is required' }),
+      });
+    }
+
+    const user = db.users.find(
+      (user) =>
+        user.email.toLowerCase() === email.toLowerCase() &&
+        user.password === password,
     );
+
+    if (!user) {
+      return HttpResponse.json(
+        { error: 'Invalid email or password' },
+        { status: 401 },
+      );
+    }
+
+    const token = makeToken(user.id);
+
+    return HttpResponse.json({
+      token,
+      user: getPublicUser(user),
+    });
   }),
 
   // GET /auth/me
@@ -421,12 +494,15 @@ export const handlers = [
     // IMPORTANT:
     // Password must not be returned.
 
-    void request;
+    const user = getUser(request);
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement current user' },
-      { status: 501 },
-    );
+    if (!user) {
+      return unauthorized();
+    }
+
+    return HttpResponse.json({
+      user: getPublicUser(user),
+    });
   }),
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -588,40 +664,37 @@ export const handlers = [
   }),
 
   // POST /projects/:id/tasks
-  http.post(
-    `${BASE_URL}/projects/:id/tasks`,
-    async ({ request, params }) => {
-      // TODO:
-      //
-      // 1. Authenticate user.
-      // 2. Find project.
-      // 3. Handle 404.
-      // 4. Check project ownership.
-      // 5. Handle 403.
-      // 6. Read CreateTaskRequest.
-      // 7. Validate title.
-      // 8. Create task.
-      //
-      // Defaults:
-      // status   -> todo
-      // priority -> medium
-      //
-      // 9. Generate created_at.
-      // 10. Generate updated_at.
-      // 11. Add task to db.tasks.
-      // 12. Return created task.
-      //
-      // Success HTTP status: 201.
+  http.post(`${BASE_URL}/projects/:id/tasks`, async ({ request, params }) => {
+    // TODO:
+    //
+    // 1. Authenticate user.
+    // 2. Find project.
+    // 3. Handle 404.
+    // 4. Check project ownership.
+    // 5. Handle 403.
+    // 6. Read CreateTaskRequest.
+    // 7. Validate title.
+    // 8. Create task.
+    //
+    // Defaults:
+    // status   -> todo
+    // priority -> medium
+    //
+    // 9. Generate created_at.
+    // 10. Generate updated_at.
+    // 11. Add task to db.tasks.
+    // 12. Return created task.
+    //
+    // Success HTTP status: 201.
 
-      void request;
-      void params;
+    void request;
+    void params;
 
-      return HttpResponse.json(
-        { error: 'TODO: Implement create task' },
-        { status: 501 },
-      );
-    },
-  ),
+    return HttpResponse.json(
+      { error: 'TODO: Implement create task' },
+      { status: 501 },
+    );
+  }),
 
   // PATCH /tasks/:id
   http.patch(`${BASE_URL}/tasks/:id`, async ({ request, params }) => {
