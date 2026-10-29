@@ -400,6 +400,27 @@ const getParam = (param: string | readonly string[] | undefined): string => {
 
   return '';
 };
+const isTaskStatus = (value: unknown): value is TaskStatus =>
+  value === 'todo' || value === 'in_progress' || value === 'done';
+
+const isTaskPriority = (value: unknown): value is TaskPriority =>
+  value === 'low' || value === 'medium' || value === 'high';
+
+const isValidDueDate = (value: unknown): boolean => {
+  if (typeof value !== 'string') {
+    return false;
+  }
+
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) {
+    return false;
+  }
+
+  const date = new Date(`${value}T00:00:00.000Z`);
+
+  return (
+    !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value
+  );
+};
 
 // ─────────────────────────────────────────────────────────────────────────────
 // API Handlers
@@ -619,69 +640,117 @@ export const handlers = [
 
   // GET /projects/:id
   http.get(`${BASE_URL}/projects/:id`, ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Extract project ID from params.
-    // 3. Find project.
-    // 4. Return 404 when project doesn't exist.
-    // 5. Verify current user owns the project.
-    // 6. Return 403 when access isn't allowed.
-    // 7. Get tasks belonging to this project.
-    // 8. Return project including tasks.
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
-    void params;
+    if (!user) {
+      return unauthorized();
+    }
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement fetch project' },
-      { status: 501 },
-    );
+    // 2. Get the project ID from the URL
+    const id = getParam(params.id);
+
+    // 3. Find the project
+    const project = db.projects.find((item) => item.id === id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 4. Check project ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 5. Get the project's tasks
+    const tasks = db.tasks.filter((task) => task.project_id === project.id);
+
+    // 6. Return the project with its tasks
+    return HttpResponse.json({
+      ...project,
+      tasks,
+    });
   }),
 
   // PATCH /projects/:id
   http.patch(`${BASE_URL}/projects/:id`, async ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find project by ID.
-    // 3. Handle 404.
-    // 4. Check ownership.
-    // 5. Handle 403.
-    // 6. Read UpdateProjectRequest.
-    // 7. Update only provided fields.
-    // 8. Validate project name when supplied.
-    // 9. Return updated project.
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
-    void params;
+    if (!user) {
+      return unauthorized();
+    }
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement update project' },
-      { status: 501 },
-    );
+    // 2. Find the project
+    const id = getParam(params.id);
+
+    const project = db.projects.find((item) => item.id === id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 3. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 4. Read the update data
+    const body = (await request.json()) as UpdateProjectRequest;
+
+    // 5. Validate the name only if provided
+    if (body.name !== undefined && !body.name.trim()) {
+      return validationError({
+        name: 'Project name cannot be empty',
+      });
+    }
+
+    // 6. Update only the provided fields
+    if (body.name !== undefined) {
+      project.name = body.name.trim();
+    }
+
+    if (body.description !== undefined) {
+      project.description = body.description.trim();
+    }
+
+    // 7. Return the updated project
+    return HttpResponse.json(project);
   }),
 
   // DELETE /projects/:id
   http.delete(`${BASE_URL}/projects/:id`, ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find project.
-    // 3. Handle 404.
-    // 4. Check ownership.
-    // 5. Handle 403.
-    // 6. Delete project.
-    // 7. Delete all tasks belonging to that project.
-    // 8. Return HTTP 204 No Content.
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
-    void params;
+    if (!user) {
+      return unauthorized();
+    }
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement delete project' },
-      { status: 501 },
-    );
+    // 2. Find the project
+    const id = getParam(params.id);
+
+    const projectIndex = db.projects.findIndex((project) => project.id === id);
+
+    if (projectIndex === -1) {
+      return notFound();
+    }
+
+    const project = db.projects[projectIndex];
+
+    // 3. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 4. Delete the project
+    db.projects.splice(projectIndex, 1);
+
+    // 5. Delete its associated tasks
+    db.tasks = db.tasks.filter((task) => task.project_id !== project.id);
+
+    // 6. Return No Content
+    return new HttpResponse(null, { status: 204 });
   }),
 
   // ───────────────────────────────────────────────────────────────────────────
@@ -714,14 +783,62 @@ export const handlers = [
     // {
     //   tasks: [...]
     // }
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
-    void params;
+    if (!user) {
+      return unauthorized();
+    }
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement fetch tasks' },
-      { status: 501 },
-    );
+    // 2. Find the project
+    const id = getParam(params.id);
+
+    const project = db.projects.find((item) => item.id === id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 3. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 4. Read query parameters
+    const url = new URL(request.url);
+
+    const status = url.searchParams.get('status');
+    const priority = url.searchParams.get('priority');
+    const assignee = url.searchParams.get('assignee');
+    const search = url.searchParams.get('search')?.trim().toLowerCase();
+
+    // 5. Get tasks belonging to this project
+    let tasks = db.tasks.filter((task) => task.project_id === project.id);
+
+    // 6. Apply filters
+    if (status) {
+      tasks = tasks.filter((task) => task.status === status);
+    }
+
+    if (priority) {
+      tasks = tasks.filter((task) => task.priority === priority);
+    }
+
+    if (assignee) {
+      tasks = tasks.filter((task) => task.assignee_id === assignee);
+    }
+
+    // 7. Search in title and description
+    if (search) {
+      tasks = tasks.filter(
+        (task) =>
+          task.title.toLowerCase().includes(search) ||
+          task.description.toLowerCase().includes(search),
+      );
+    }
+
+    // 8. Return the filtered tasks
+    return HttpResponse.json({ tasks });
   }),
 
   // POST /projects/:id/tasks
@@ -748,13 +865,79 @@ export const handlers = [
     //
     // Success HTTP status: 201.
 
-    void request;
-    void params;
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement create task' },
-      { status: 501 },
-    );
+    if (!user) {
+      return unauthorized();
+    }
+
+    // 2. Find the project
+    const id = getParam(params.id);
+
+    const project = db.projects.find((item) => item.id === id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 3. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 4. Read and validate the request body
+    const body = (await request.json()) as CreateTaskRequest;
+    const title = body.title?.trim();
+
+    if (!title) {
+      return validationError({
+        title: 'Task title is required',
+      });
+    }
+    if (body.status !== undefined && !isTaskStatus(body.status)) {
+      return validationError({
+        status: 'Invalid task status',
+      });
+    }
+
+    if (body.priority !== undefined && !isTaskPriority(body.priority)) {
+      return validationError({
+        priority: 'Invalid task priority',
+      });
+    }
+
+    if (
+      body.due_date !== undefined &&
+      body.due_date !== null &&
+      !isValidDueDate(body.due_date)
+    ) {
+      return validationError({
+        due_date: 'Due date must be a valid YYYY-MM-DD date',
+      });
+    }
+
+    // 5. Create the task
+    const now = getCurrentDate();
+
+    const task: TaskRecord = {
+      id: createId(),
+      project_id: project.id,
+      title,
+      description: body.description?.trim() ?? '',
+      status: body.status ?? 'todo',
+      priority: body.priority ?? 'medium',
+      assignee_id: body.assignee_id ?? null,
+      due_date: body.due_date ?? null,
+      created_at: now,
+      updated_at: now,
+    };
+
+    // 6. Save the task
+    db.tasks.push(task);
+
+    // 7. Return the created task
+    return HttpResponse.json(task, { status: 201 });
   }),
 
   // PATCH /tasks/:id
@@ -782,13 +965,96 @@ export const handlers = [
     // 10. Update updated_at.
     // 11. Return updated task.
 
-    void request;
-    void params;
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement update task' },
-      { status: 501 },
-    );
+    if (!user) {
+      return unauthorized();
+    }
+
+    // 2. Find the task
+    const id = getParam(params.id);
+
+    const task = db.tasks.find((item) => item.id === id);
+
+    if (!task) {
+      return notFound();
+    }
+
+    // 3. Find the parent project
+    const project = db.projects.find((item) => item.id === task.project_id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 4. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 5. Read update data
+    const body = (await request.json()) as UpdateTaskRequest;
+
+    // 6. Validate the title if provided
+    if (body.title !== undefined && !body.title.trim()) {
+      return validationError({
+        title: 'Task title cannot be empty',
+      });
+    }
+
+    if (body.status !== undefined && !isTaskStatus(body.status)) {
+      return validationError({
+        status: 'Invalid task status',
+      });
+    }
+
+    if (body.priority !== undefined && !isTaskPriority(body.priority)) {
+      return validationError({
+        priority: 'Invalid task priority',
+      });
+    }
+
+    if (
+      body.due_date !== undefined &&
+      body.due_date !== null &&
+      !isValidDueDate(body.due_date)
+    ) {
+      return validationError({
+        due_date: 'Due date must be a valid YYYY-MM-DD date',
+      });
+    }
+
+    // 7. Update only provided fields
+    if (body.title !== undefined) {
+      task.title = body.title.trim();
+    }
+
+    if (body.description !== undefined) {
+      task.description = body.description.trim();
+    }
+
+    if (body.status !== undefined) {
+      task.status = body.status;
+    }
+
+    if (body.priority !== undefined) {
+      task.priority = body.priority;
+    }
+
+    if (body.assignee_id !== undefined) {
+      task.assignee_id = body.assignee_id;
+    }
+
+    if (body.due_date !== undefined) {
+      task.due_date = body.due_date;
+    }
+
+    // 8. Update timestamp
+    task.updated_at = getCurrentDate();
+
+    // 9. Return updated task
+    return HttpResponse.json(task);
   }),
 
   // DELETE /tasks/:id
@@ -804,12 +1070,38 @@ export const handlers = [
     // 7. Delete task from db.tasks.
     // 8. Return HTTP 204 No Content.
 
-    void request;
-    void params;
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement delete task' },
-      { status: 501 },
-    );
+    if (!user) {
+      return unauthorized();
+    }
+
+    // 2. Find the task
+    const id = getParam(params.id);
+
+    const task = db.tasks.find((item) => item.id === id);
+
+    if (!task) {
+      return notFound();
+    }
+
+    // 3. Find the parent project
+    const project = db.projects.find((item) => item.id === task.project_id);
+
+    if (!project) {
+      return notFound();
+    }
+
+    // 4. Check ownership
+    if (project.owner_id !== user.id) {
+      return forbidden();
+    }
+
+    // 5. Delete the task
+    db.tasks = db.tasks.filter((item) => item.id !== task.id);
+
+    // 6. Return No Content
+    return new HttpResponse(null, { status: 204 });
   }),
 ];

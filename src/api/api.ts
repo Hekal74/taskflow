@@ -50,7 +50,93 @@ type CreateProjectData = {
   name: string;
   description?: string;
 };
+type UpdateProjectData = Partial<CreateProjectData>;
+type TaskStatus = 'todo' | 'in-progress' | 'done';
+type TaskPriority = 'low' | 'medium' | 'high';
+type TaskApiResponse = {
+  id: string;
+  project_id: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee_id: string | null;
+  due_date: string | null;
+  created_at: string;
+  updated_at: string;
+};
+type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee: string | null;
+  dueDate: string | null;
+  createdAt: string;
+  updatedAt: string;
+};
+type CreateTaskData = {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  assignee?: string | null;
+  dueDate?: string | null;
+};
 
+type UpdateTaskData = Partial<CreateTaskData>;
+
+type TaskFilters = {
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  assignee?: string;
+  search?: string;
+};
+
+const mapTask = (task: TaskApiResponse): Task => ({
+  id: task.id,
+  projectId: task.project_id,
+  title: task.title,
+  description: task.description,
+  status: task.status,
+  priority: task.priority,
+  assignee: task.assignee_id,
+  dueDate: task.due_date,
+  createdAt: task.created_at,
+  updatedAt: task.updated_at,
+});
+
+const toTaskPayload = (data: CreateTaskData | UpdateTaskData) => {
+  const payload: Record<string, unknown> = {};
+
+  if (data.title !== undefined) {
+    payload.title = data.title;
+  }
+
+  if (data.description !== undefined) {
+    payload.description = data.description;
+  }
+
+  if (data.status !== undefined) {
+    payload.status = data.status;
+  }
+
+  if (data.priority !== undefined) {
+    payload.priority = data.priority;
+  }
+
+  if (data.assignee !== undefined) {
+    payload.assignee_id = data.assignee;
+  }
+
+  if (data.dueDate !== undefined) {
+    payload.due_date = data.dueDate;
+  }
+
+  return payload;
+};
 class ApiError extends Error {
   constructor(
     message: string,
@@ -299,8 +385,6 @@ export const fetchProjects = async (): Promise<Project[]> => {
   // Return ONLY the projects array.
   const response = await get<{ projects: Project[] }>('/projects');
   return response.projects;
-
-  throw new Error('TODO: Implement fetchProjects()');
 };
 
 export const createProject = async (
@@ -309,28 +393,32 @@ export const createProject = async (
   return post<Project>('/projects', data);
 };
 
-export const fetchProject = async (id: string): Promise<unknown> => {
-  // TODO:
-  // GET /projects/:id
-
-  throw new Error('TODO: Implement fetchProject()');
+type ProjectDetailsResponse = Project & {
+  tasks: TaskApiResponse[];
 };
+
+export const fetchProjectById = async (
+  id: string,
+): Promise<Project & { tasks: Task[] }> => {
+  const response = await get<ProjectDetailsResponse>(`/projects/${id}`);
+
+  return {
+    ...response,
+    tasks: response.tasks.map(mapTask),
+  };
+};
+
+export const fetchProject = fetchProjectById;
 
 export const updateProject = async (
   id: string,
-  data: unknown,
-): Promise<unknown> => {
-  // TODO:
-  // PATCH /projects/:id
-
-  throw new Error('TODO: Implement updateProject()');
+  data: UpdateProjectData,
+): Promise<Project> => {
+  return patch<Project>(`/projects/${id}`, data);
 };
 
 export const deleteProject = async (id: string): Promise<void> => {
-  // TODO:
-  // DELETE /projects/:id
-
-  throw new Error('TODO: Implement deleteProject()');
+  return del(`/projects/${id}`);
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -339,8 +427,8 @@ export const deleteProject = async (id: string): Promise<void> => {
 
 export const fetchTasks = async (
   projectId: string,
-  filters: Record<string, string> = {},
-): Promise<unknown[]> => {
+  filters: TaskFilters = {},
+): Promise<Task[]> => {
   // TODO:
   // Replace temporary types with your Task and TaskFilters types.
   //
@@ -354,36 +442,48 @@ export const fetchTasks = async (
   //
   // Do NOT add undefined filter values.
 
-  throw new Error('TODO: Implement fetchTasks()');
+  const query = new URLSearchParams();
+
+  Object.entries(filters).forEach(([key, value]) => {
+    if (value !== undefined && value !== '') {
+      query.set(key, value);
+    }
+  });
+
+  const queryString = query.toString();
+  const path = `/projects/${projectId}/tasks${
+    queryString ? `?${queryString}` : ''
+  }`;
+
+  const response = await get<{ tasks: TaskApiResponse[] }>(path);
+
+  return response.tasks.map(mapTask);
 };
 
 export const createTask = async (
   projectId: string,
-  data: unknown,
-): Promise<unknown> => {
-  // TODO:
-  // POST /projects/:projectId/tasks
-  //
-  // Replace the temporary types.
+  data: CreateTaskData,
+): Promise<Task> => {
+  const response = await post<TaskApiResponse>(
+    `/projects/${projectId}/tasks`,
+    toTaskPayload(data),
+  );
 
-  throw new Error('TODO: Implement createTask()');
+  return mapTask(response);
 };
 
 export const updateTask = async (
   taskId: string,
-  data: unknown,
-): Promise<unknown> => {
-  // TODO:
-  // PATCH /tasks/:taskId
-  //
-  // Replace the temporary types.
+  data: UpdateTaskData,
+): Promise<Task> => {
+  const response = await patch<TaskApiResponse>(
+    `/tasks/${taskId}`,
+    toTaskPayload(data),
+  );
 
-  throw new Error('TODO: Implement updateTask()');
+  return mapTask(response);
 };
 
 export const deleteTask = async (taskId: string): Promise<void> => {
-  // TODO:
-  // DELETE /tasks/:taskId
-
-  throw new Error('TODO: Implement deleteTask()');
+  return del(`/tasks/${taskId}`);
 };
