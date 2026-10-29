@@ -19,18 +19,51 @@ interface PublicUser {
   email: string;
 }
 
-interface Project {
+type Project = {
   id: string;
   name: string;
   description: string;
-  owner_id: string;
-  created_at: string;
-}
+  owner_id?: string;
+  created_at?: string;
+  task_count?: number;
+  done_count?: number;
+};
 
 type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 type TaskPriority = 'low' | 'medium' | 'high';
+type Task = {
+  id: string;
+  projectId: string;
+  title: string;
+  description: string;
+  status: TaskStatus;
+  priority: TaskPriority;
+  assignee: string | null;
+  dueDate: string | null;
+};
+type CreateProjectData = {
+  name: string;
+  description?: string;
+};
 
+type UpdateProjectData = Partial<CreateProjectData>;
+type CreateTaskData = {
+  title: string;
+  description?: string;
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  assignee?: string | null;
+  dueDate?: string | null;
+};
+type UpdateTaskData = Partial<CreateTaskData>;
+
+type TaskFilters = {
+  status?: TaskStatus;
+  priority?: TaskPriority;
+  assignee?: string;
+  search?: string;
+};
 interface TaskRecord {
   id: string;
   project_id: string;
@@ -357,7 +390,13 @@ const getParam = (param: string | readonly string[] | undefined): string => {
   //
   // Return an empty string when no valid value exists.
 
-  void param;
+  if (typeof param === 'string') {
+    return param;
+  }
+
+  if (Array.isArray(param)) {
+    return param[0] ?? '';
+  }
 
   return '';
 };
@@ -511,25 +550,34 @@ export const handlers = [
 
   // GET /projects
   http.get(`${BASE_URL}/projects`, ({ request }) => {
-    // TODO:
-    //
-    // 1. Authenticate the request.
-    // 2. Return 401 if necessary.
-    // 3. Get projects belonging to the current user.
-    // 4. Calculate task_count for each project.
-    // 5. Calculate done_count for each project.
-    // 6. Return:
-    //
-    // {
-    //   projects: [...]
-    // }
+    // 1. Authenticate the current user
+    const user = getUser(request);
 
-    void request;
+    if (!user) {
+      return unauthorized();
+    }
+    // 2. Return only projects owned by the current user
+    const projects = db.projects
+      .filter((project) => project.owner_id === user.id)
+      .map((project) => {
+        // 3. Get all tasks belonging to this project
+        const projectTasks = db.tasks.filter(
+          (task) => task.project_id === project.id,
+        );
+        // 4. Calculate project statistics
+        const task_count = projectTasks.length;
 
-    return HttpResponse.json(
-      { error: 'TODO: Implement fetch projects' },
-      { status: 501 },
-    );
+        const done_count = projectTasks.filter(
+          (task) => task.status === 'done',
+        ).length;
+        return {
+          ...project,
+          task_count,
+          done_count,
+        };
+      });
+
+    return HttpResponse.json({ projects });
   }),
 
   // POST /projects

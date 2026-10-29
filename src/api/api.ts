@@ -37,6 +37,15 @@ interface ApiErrorResponse {
   error?: string;
   fields?: Record<string, string>;
 }
+type Project = {
+  id: string;
+  name: string;
+  description: string;
+  owner_id?: string;
+  created_at?: string;
+  task_count?: number;
+  done_count?: number;
+};
 
 class ApiError extends Error {
   constructor(
@@ -271,7 +280,7 @@ export const logout = (): void => {
 // TODO 6: Projects API
 // ─────────────────────────────────────────────────────────────────────────────
 
-export const fetchProjects = async (): Promise<unknown[]> => {
+export const fetchProjects = async (): Promise<Project[]> => {
   // TODO:
   // Replace "unknown[]" with the proper type.
   //
@@ -284,6 +293,8 @@ export const fetchProjects = async (): Promise<unknown[]> => {
   // }
   //
   // Return ONLY the projects array.
+  const response = await get<{ projects: Project[] }>('/projects');
+  return response.projects;
 
   throw new Error('TODO: Implement fetchProjects()');
 };
