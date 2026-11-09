@@ -400,6 +400,28 @@ const getParam = (param: string | readonly string[] | undefined): string => {
 
   return '';
 };
+
+type RequestBody = Record<string, unknown>;
+
+const readJsonBody = async (request: Request): Promise<RequestBody | null> => {
+  try {
+    const body: unknown = await request.json();
+
+    if (body === null || typeof body !== 'object' || Array.isArray(body)) {
+      return null;
+    }
+
+    return body as RequestBody;
+  } catch {
+    return null;
+  }
+};
+
+const isOptionalString = (value: unknown): boolean =>
+  value === undefined || typeof value === 'string';
+
+const isOptionalNullableString = (value: unknown): boolean =>
+  value === undefined || value === null || typeof value === 'string';
 const isTaskStatus = (value: unknown): value is TaskStatus =>
   value === 'todo' || value === 'in_progress' || value === 'done';
 
@@ -433,49 +455,37 @@ export const handlers = [
 
   // POST /auth/register
   http.post(`${BASE_URL}/auth/register`, async ({ request }) => {
-    // TODO:
-    //
-    // 1. Read RegisterRequest from request body.
-    // 2. Trim name and email.
-    // 3. Validate name, email and password.
-    // 4. Return validation errors for missing fields.
-    // 5. Check whether email is already registered.
-    // 6. Email comparison should be case-insensitive.
-    // 7. Create a new User.
-    // 8. Add the user to db.users.
-    // 9. Generate authentication token.
-    // 10. Return token + PublicUser.
-    //
-    // Success HTTP status: 201.
+    const body = await readJsonBody(request);
 
-    const body = (await request.json()) as {
-      name?: string;
-      email?: string;
-      password?: string;
-    };
-    const name = body.name?.trim() ?? '';
-    const email = body.email?.trim() ?? '';
-    const password = body.password ?? '';
+    if (!body) {
+      return validationError({
+        body: 'Request body must be a valid JSON object',
+      });
+    }
 
     const fields: ValidationFields = {};
 
-    if (!name) {
+    if (typeof body.name !== 'string' || !body.name.trim()) {
       fields.name = 'Name is required';
     }
 
-    if (!email) {
+    if (typeof body.email !== 'string' || !body.email.trim()) {
       fields.email = 'Email is required';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) {
       fields.email = 'Enter a valid email address';
     }
 
-    if (!password.trim()) {
+    if (typeof body.password !== 'string' || !body.password.trim()) {
       fields.password = 'Password is required';
     }
 
     if (Object.keys(fields).length > 0) {
       return validationError(fields);
     }
+
+    const name = (body.name as string).trim();
+    const email = (body.email as string).trim();
+    const password = body.password as string;
 
     const existingUser = db.users.find(
       (user) => user.email.toLowerCase() === email.toLowerCase(),
@@ -510,17 +520,30 @@ export const handlers = [
 
   // POST /auth/login
   http.post(`${BASE_URL}/auth/login`, async ({ request }) => {
-    const body = (await request.json()) as LoginRequest;
+    const body = await readJsonBody(request);
 
-    const email = body.email?.trim() ?? '';
-    const password = body.password ?? '';
-
-    if (!email || !password) {
+    if (!body) {
       return validationError({
-        ...(!email && { email: 'Email is required' }),
-        ...(!password && { password: 'Password is required' }),
+        body: 'Request body must be a valid JSON object',
       });
     }
+
+    const fields: ValidationFields = {};
+
+    if (typeof body.email !== 'string' || !body.email.trim()) {
+      fields.email = 'Email is required';
+    }
+
+    if (typeof body.password !== 'string' || !body.password.trim()) {
+      fields.password = 'Password is required';
+    }
+
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
+    const email = (body.email as string).trim();
+    const password = body.password as string;
 
     const user = db.users.find(
       (user) =>
@@ -610,23 +633,36 @@ export const handlers = [
       return unauthorized();
     }
 
-    // 2. Read the request body
-    const body = (await request.json()) as CreateProjectRequest;
+    const body = await readJsonBody(request);
 
-    // 3. Validate the project name
-    const name = body.name?.trim();
-
-    if (!name) {
+    if (!body) {
       return validationError({
-        name: 'Project name is required',
+        body: 'Request body must be a valid JSON object',
       });
     }
+
+    const fields: ValidationFields = {};
+
+    if (typeof body.name !== 'string' || !body.name.trim()) {
+      fields.name = 'Project name is required';
+    }
+
+    if (!isOptionalString(body.description)) {
+      fields.description = 'Description must be a string';
+    }
+
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
+    const name = (body.name as string).trim();
+    const description = (body.description as string | undefined)?.trim() ?? '';
 
     // 4. Create the project
     const project: Project = {
       id: createId(),
       name,
-      description: body.description?.trim() ?? '',
+      description,
       owner_id: user.id,
       created_at: getCurrentDate(),
     };
@@ -674,47 +710,55 @@ export const handlers = [
 
   // PATCH /projects/:id
   http.patch(`${BASE_URL}/projects/:id`, async ({ request, params }) => {
-    // 1. Authenticate the current user
     const user = getUser(request);
 
     if (!user) {
       return unauthorized();
     }
 
-    // 2. Find the project
     const id = getParam(params.id);
-
     const project = db.projects.find((item) => item.id === id);
 
     if (!project) {
       return notFound();
     }
 
-    // 3. Check ownership
     if (project.owner_id !== user.id) {
       return forbidden();
     }
 
-    // 4. Read the update data
-    const body = (await request.json()) as UpdateProjectRequest;
+    const body = await readJsonBody(request);
 
-    // 5. Validate the name only if provided
-    if (body.name !== undefined && !body.name.trim()) {
+    if (!body) {
       return validationError({
-        name: 'Project name cannot be empty',
+        body: 'Request body must be a valid JSON object',
       });
     }
 
-    // 6. Update only the provided fields
+    const fields: ValidationFields = {};
+
     if (body.name !== undefined) {
-      project.name = body.name.trim();
+      if (typeof body.name !== 'string' || !body.name.trim()) {
+        fields.name = 'Project name cannot be empty';
+      }
+    }
+
+    if (!isOptionalString(body.description)) {
+      fields.description = 'Description must be a string';
+    }
+
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
+    if (body.name !== undefined) {
+      project.name = (body.name as string).trim();
     }
 
     if (body.description !== undefined) {
-      project.description = body.description.trim();
+      project.description = (body.description as string).trim();
     }
 
-    // 7. Return the updated project
     return HttpResponse.json(project);
   }),
 
@@ -843,68 +887,51 @@ export const handlers = [
 
   // POST /projects/:id/tasks
   http.post(`${BASE_URL}/projects/:id/tasks`, async ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find project.
-    // 3. Handle 404.
-    // 4. Check project ownership.
-    // 5. Handle 403.
-    // 6. Read CreateTaskRequest.
-    // 7. Validate title.
-    // 8. Create task.
-    //
-    // Defaults:
-    // status   -> todo
-    // priority -> medium
-    //
-    // 9. Generate created_at.
-    // 10. Generate updated_at.
-    // 11. Add task to db.tasks.
-    // 12. Return created task.
-    //
-    // Success HTTP status: 201.
-
-    // 1. Authenticate the current user
     const user = getUser(request);
 
     if (!user) {
       return unauthorized();
     }
 
-    // 2. Find the project
     const id = getParam(params.id);
-
     const project = db.projects.find((item) => item.id === id);
 
     if (!project) {
       return notFound();
     }
 
-    // 3. Check ownership
     if (project.owner_id !== user.id) {
       return forbidden();
     }
 
-    // 4. Read and validate the request body
-    const body = (await request.json()) as CreateTaskRequest;
-    const title = body.title?.trim();
+    const body = await readJsonBody(request);
 
-    if (!title) {
+    if (!body) {
       return validationError({
-        title: 'Task title is required',
+        body: 'Request body must be a valid JSON object',
       });
     }
+
+    const fields: ValidationFields = {};
+
+    if (typeof body.title !== 'string' || !body.title.trim()) {
+      fields.title = 'Task title is required';
+    }
+
+    if (!isOptionalString(body.description)) {
+      fields.description = 'Description must be a string';
+    }
+
     if (body.status !== undefined && !isTaskStatus(body.status)) {
-      return validationError({
-        status: 'Invalid task status',
-      });
+      fields.status = 'Invalid task status';
     }
 
     if (body.priority !== undefined && !isTaskPriority(body.priority)) {
-      return validationError({
-        priority: 'Invalid task priority',
-      });
+      fields.priority = 'Invalid task priority';
+    }
+
+    if (!isOptionalNullableString(body.assignee_id)) {
+      fields.assignee_id = 'Assignee must be a string or null';
     }
 
     if (
@@ -912,107 +939,88 @@ export const handlers = [
       body.due_date !== null &&
       !isValidDueDate(body.due_date)
     ) {
-      return validationError({
-        due_date: 'Due date must be a valid YYYY-MM-DD date',
-      });
+      fields.due_date = 'Due date must be a valid YYYY-MM-DD date';
     }
 
-    // 5. Create the task
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
     const now = getCurrentDate();
 
     const task: TaskRecord = {
       id: createId(),
       project_id: project.id,
-      title,
-      description: body.description?.trim() ?? '',
-      status: body.status ?? 'todo',
-      priority: body.priority ?? 'medium',
-      assignee_id: body.assignee_id ?? null,
-      due_date: body.due_date ?? null,
+      title: (body.title as string).trim(),
+      description: (body.description as string | undefined)?.trim() ?? '',
+      status: (body.status as TaskStatus | undefined) ?? 'todo',
+      priority: (body.priority as TaskPriority | undefined) ?? 'medium',
+      assignee_id: (body.assignee_id as string | null | undefined) ?? null,
+      due_date: (body.due_date as string | null | undefined) ?? null,
       created_at: now,
       updated_at: now,
     };
 
-    // 6. Save the task
     db.tasks.push(task);
 
-    // 7. Return the created task
     return HttpResponse.json(task, { status: 201 });
   }),
 
   // PATCH /tasks/:id
   http.patch(`${BASE_URL}/tasks/:id`, async ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find task.
-    // 3. Handle 404.
-    // 4. Find parent project.
-    // 5. Verify project ownership.
-    // 6. Handle 403.
-    // 7. Read UpdateTaskRequest.
-    // 8. Update only provided properties.
-    //
-    // Supported fields:
-    // - title
-    // - description
-    // - status
-    // - priority
-    // - assignee_id
-    // - due_date
-    //
-    // 9. Do not allow an empty title.
-    // 10. Update updated_at.
-    // 11. Return updated task.
-
-    // 1. Authenticate the current user
     const user = getUser(request);
 
     if (!user) {
       return unauthorized();
     }
 
-    // 2. Find the task
     const id = getParam(params.id);
-
     const task = db.tasks.find((item) => item.id === id);
 
     if (!task) {
       return notFound();
     }
 
-    // 3. Find the parent project
     const project = db.projects.find((item) => item.id === task.project_id);
 
     if (!project) {
       return notFound();
     }
 
-    // 4. Check ownership
     if (project.owner_id !== user.id) {
       return forbidden();
     }
 
-    // 5. Read update data
-    const body = (await request.json()) as UpdateTaskRequest;
+    const body = await readJsonBody(request);
 
-    // 6. Validate the title if provided
-    if (body.title !== undefined && !body.title.trim()) {
+    if (!body) {
       return validationError({
-        title: 'Task title cannot be empty',
+        body: 'Request body must be a valid JSON object',
       });
+    }
+
+    const fields: ValidationFields = {};
+
+    if (body.title !== undefined) {
+      if (typeof body.title !== 'string' || !body.title.trim()) {
+        fields.title = 'Task title cannot be empty';
+      }
+    }
+
+    if (!isOptionalString(body.description)) {
+      fields.description = 'Description must be a string';
     }
 
     if (body.status !== undefined && !isTaskStatus(body.status)) {
-      return validationError({
-        status: 'Invalid task status',
-      });
+      fields.status = 'Invalid task status';
     }
 
     if (body.priority !== undefined && !isTaskPriority(body.priority)) {
-      return validationError({
-        priority: 'Invalid task priority',
-      });
+      fields.priority = 'Invalid task priority';
+    }
+
+    if (!isOptionalNullableString(body.assignee_id)) {
+      fields.assignee_id = 'Assignee must be a string or null';
     }
 
     if (
@@ -1020,40 +1028,39 @@ export const handlers = [
       body.due_date !== null &&
       !isValidDueDate(body.due_date)
     ) {
-      return validationError({
-        due_date: 'Due date must be a valid YYYY-MM-DD date',
-      });
+      fields.due_date = 'Due date must be a valid YYYY-MM-DD date';
     }
 
-    // 7. Update only provided fields
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
+
     if (body.title !== undefined) {
-      task.title = body.title.trim();
+      task.title = (body.title as string).trim();
     }
 
     if (body.description !== undefined) {
-      task.description = body.description.trim();
+      task.description = (body.description as string).trim();
     }
 
     if (body.status !== undefined) {
-      task.status = body.status;
+      task.status = body.status as TaskStatus;
     }
 
     if (body.priority !== undefined) {
-      task.priority = body.priority;
+      task.priority = body.priority as TaskPriority;
     }
 
     if (body.assignee_id !== undefined) {
-      task.assignee_id = body.assignee_id;
+      task.assignee_id = body.assignee_id as string | null;
     }
 
     if (body.due_date !== undefined) {
-      task.due_date = body.due_date;
+      task.due_date = body.due_date as string | null;
     }
 
-    // 8. Update timestamp
     task.updated_at = getCurrentDate();
 
-    // 9. Return updated task
     return HttpResponse.json(task);
   }),
 

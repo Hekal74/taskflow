@@ -51,7 +51,7 @@ type CreateProjectData = {
   description?: string;
 };
 type UpdateProjectData = Partial<CreateProjectData>;
-type TaskStatus = 'todo' | 'in-progress' | 'done';
+type TaskStatus = 'todo' | 'in_progress' | 'done';
 type TaskPriority = 'low' | 'medium' | 'high';
 type TaskApiResponse = {
   id: string;
@@ -243,15 +243,29 @@ const request = async <T>(
     return undefined as T;
   }
 
-  const data = (await response.json()) as ApiErrorResponse | T;
+  const responseText = await response.text();
+
+  let data: ApiErrorResponse | T | undefined;
+
+  if (responseText) {
+    try {
+      data = JSON.parse(responseText) as ApiErrorResponse | T;
+    } catch {
+      if (!response.ok) {
+        throw new ApiError('Request failed', response.status);
+      }
+
+      throw new ApiError('Invalid server response', response.status);
+    }
+  }
 
   if (!response.ok) {
-    const errorData = data as ApiErrorResponse;
+    const errorData = data as ApiErrorResponse | undefined;
 
     throw new ApiError(
-      errorData.error ?? 'Request failed',
+      errorData?.error ?? 'Request failed',
       response.status,
-      errorData.fields,
+      errorData?.fields,
     );
   }
 
@@ -327,16 +341,6 @@ export const loginUser = async (data: LoginData): Promise<AuthResponse> => {
 };
 
 export const getMe = (): User | null => {
-  // TODO:
-  // Replace "unknown" with the proper return type.
-  //
-  // Read "tf_user" from localStorage.
-  // Parse the JSON safely.
-  //
-  // Return null when:
-  // - no user exists
-  // - stored JSON is invalid
-
   const storedUser = localStorage.getItem('tf_user');
   if (!storedUser) {
     return null;
@@ -346,6 +350,19 @@ export const getMe = (): User | null => {
     return JSON.parse(storedUser) as User;
   } catch {
     return null;
+  }
+};
+
+export const fetchCurrentUser = async (): Promise<User> => {
+  try {
+    const response = await get<{ user: User }>('/auth/me');
+    return response.user;
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) {
+      logout();
+    }
+
+    throw error;
   }
 };
 
