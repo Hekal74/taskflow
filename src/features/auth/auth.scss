@@ -1,0 +1,160 @@
+.auth-page {
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background: #f3f5f8;
+  color: #172033;
+  font-family:
+    Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI",
+    sans-serif;
+}
+
+.auth-card {
+  width: min(100%, 420px);
+  padding: 36px;
+  border: 1px solid #e1e6ef;
+  border-radius: 16px;
+  background: #fff;
+  box-shadow: 0 16px 40px rgb(23 32 51 / 8%);
+
+  h1 {
+    margin: 0;
+    font-size: 1.75rem;
+  }
+}
+
+.auth-brand {
+  margin: 0 0 24px;
+  color: #3659c9;
+  font-size: 1rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.auth-description {
+  margin: 8px 0 24px;
+  color: #68748a;
+  line-height: 1.5;
+}
+
+.auth-form {
+  display: grid;
+  gap: 18px;
+
+  label {
+    display: grid;
+    gap: 7px;
+    color: #333f55;
+    font-size: 0.9rem;
+    font-weight: 600;
+  }
+
+  input {
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid #cbd3e0;
+    border-radius: 8px;
+    color: inherit;
+    font: inherit;
+
+    &:focus {
+      border-color: #3659c9;
+      outline: 3px solid rgb(54 89 201 / 15%);
+    }
+
+    &[aria-invalid="true"] {
+      border-color: #bd3434;
+    }
+  }
+
+  button {
+    min-height: 44px;
+    border: 0;
+    border-radius: 8px;
+    background: #3659c9;
+    color: #fff;
+    font: inherit;
+    font-weight: 650;
+    cursor: pointer;
+
+    &:hover:not(:disabled) {
+      background: #2949ad;
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.7;
+    }
+  }
+}
+
+.auth-field-error {
+  color: #a42626;
+  font-size: 0.82rem;
+  font-weight: 400;
+}
+
+.auth-error,
+.auth-success {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  line-height: 1.4;
+}
+
+.auth-error {
+  background: #fff0f0;
+  color: #8d2020;
+}
+
+.auth-success {
+  background: #edf8f0;
+  color: #236239;
+}
+
+.auth-links {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 20px;
+
+  a {
+    color: #3659c9;
+    font-size: 0.9rem;
+    text-decoration: none;
+
+    &:hover {
+      text-decoration: underline;
+    }
+  }
+}
+
+.auth-status {
+  min-height: 100vh;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 14px;
+  padding: 24px;
+  color: #333f55;
+  text-align: center;
+
+  button {
+    padding: 10px 16px;
+    border: 0;
+    border-radius: 8px;
+    background: #3659c9;
+    color: #fff;
+    font: inherit;
+    cursor: pointer;
+  }
+}
+
+@media (max-width: 480px) {
+  .auth-card {
+    padding: 28px 22px;
+  }
+}
