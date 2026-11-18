@@ -10,6 +10,8 @@ import { useAuth } from '../features/auth/AuthContext';
 import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
+import DashboardPage from '../features/dashboard/DashboardPage';
+import ProjectsPage from '../features/projects/ProjectsPage';
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -83,11 +85,11 @@ export const router = createBrowserRouter([
     children: [
       {
         path: '/dashboard',
-        element: <h1>Dashboard</h1>,
+        element: <DashboardPage />,
       },
       {
         path: '/projects',
-        element: <h1>Projects</h1>,
+        element: <ProjectsPage />,
       },
       {
         path: '/projects/:projectId',
