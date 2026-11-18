@@ -1,5 +1,54 @@
 /* eslint-disable react-refresh/only-export-components */
-import { createBrowserRouter, Navigate, useParams } from 'react-router-dom';
+import {
+  createBrowserRouter,
+  Navigate,
+  Outlet,
+  useNavigate,
+  useParams,
+} from 'react-router-dom';
+import { useAuth } from '../features/auth/AuthContext';
+import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
+import LoginPage from '../features/auth/LoginPage';
+import RegisterPage from '../features/auth/RegisterPage';
+
+function RootRedirect() {
+  const { user } = useAuth();
+  return <Navigate to={user ? '/dashboard' : '/login'} replace />;
+}
+
+function PublicAuthRoutes() {
+  const { user } = useAuth();
+  return user ? <Navigate to="/dashboard" replace /> : <Outlet />;
+}
+
+function ProtectedRoutes() {
+  const { user, logout } = useAuth();
+  const navigate = useNavigate();
+
+  if (!user) {
+    return <Navigate to="/login" replace />;
+  }
+
+  const handleLogout = () => {
+    logout();
+    navigate('/login', { replace: true });
+  };
+
+  return (
+    <>
+      <header className="app-header">
+        <span>TaskFlow</span>
+        <span>Signed in as {user.name}</span>
+        <button type="button" onClick={handleLogout}>
+          Log out
+        </button>
+      </header>
+      <main>
+        <Outlet />
+      </main>
+    </>
+  );
+}
 
 function ProjectDetailsPage() {
   const { projectId } = useParams();
@@ -10,31 +59,41 @@ function ProjectDetailsPage() {
 export const router = createBrowserRouter([
   {
     path: '/',
-    element: <Navigate to="/login" replace />,
+    element: <RootRedirect />,
   },
   {
-    path: '/login',
-    element: <h1>Login</h1>,
-  },
-  {
-    path: '/register',
-    element: <h1>Register</h1>,
+    element: <PublicAuthRoutes />,
+    children: [
+      {
+        path: '/login',
+        element: <LoginPage />,
+      },
+      {
+        path: '/register',
+        element: <RegisterPage />,
+      },
+    ],
   },
   {
     path: '/forgot-password',
-    element: <h1>Forgot Password</h1>,
+    element: <ForgotPasswordPage />,
   },
   {
-    path: '/dashboard',
-    element: <h1>Dashboard</h1>,
-  },
-  {
-    path: '/projects',
-    element: <h1>Projects</h1>,
-  },
-  {
-    path: '/projects/:projectId',
-    element: <ProjectDetailsPage />,
+    element: <ProtectedRoutes />,
+    children: [
+      {
+        path: '/dashboard',
+        element: <h1>Dashboard</h1>,
+      },
+      {
+        path: '/projects',
+        element: <h1>Projects</h1>,
+      },
+      {
+        path: '/projects/:projectId',
+        element: <ProjectDetailsPage />,
+      },
+    ],
   },
   {
     path: '*',
