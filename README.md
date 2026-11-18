@@ -192,7 +192,7 @@ Response 204: No Content
 
 ---
 
-### GET /projects/:id/tasks?status=todo&assignee=uuid
+### GET /projects/:id/tasks?status=todo&assignee_id=uuid
 
 ```
 Response 200: { "tasks": [ /* task objects */ ] }

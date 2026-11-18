@@ -1,0 +1,17 @@
+flowchart TD
+    App --> Auth[Authentication Pages]
+    App --> Protected[Protected Application]
+
+    Protected --> Layout[App Layout]
+    Layout --> Dashboard[Dashboard Page]
+    Layout --> Projects[Projects Page]
+    Layout --> ProjectDetails[Project Details Page]
+
+    Projects --> ProjectList[Project List]
+    Projects --> ProjectCard[Project Card]
+    Projects --> ProjectForm[Project Form]
+
+    ProjectDetails --> TaskList[Task List]
+    ProjectDetails --> TaskFilters[Task Filters]
+    ProjectDetails --> TaskForm[Task Form]
+    TaskList --> TaskCard[Task Card]
