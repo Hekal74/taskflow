@@ -32,38 +32,6 @@ type Project = {
 type TaskStatus = 'todo' | 'in_progress' | 'done';
 
 type TaskPriority = 'low' | 'medium' | 'high';
-type Task = {
-  id: string;
-  projectId: string;
-  title: string;
-  description: string;
-  status: TaskStatus;
-  priority: TaskPriority;
-  assignee: string | null;
-  dueDate: string | null;
-};
-type CreateProjectData = {
-  name: string;
-  description?: string;
-};
-
-type UpdateProjectData = Partial<CreateProjectData>;
-type CreateTaskData = {
-  title: string;
-  description?: string;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  assignee?: string | null;
-  dueDate?: string | null;
-};
-type UpdateTaskData = Partial<CreateTaskData>;
-
-type TaskFilters = {
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  assignee?: string;
-  search?: string;
-};
 interface TaskRecord {
   id: string;
   project_id: string;
@@ -81,48 +49,6 @@ interface Database {
   users: User[];
   projects: Project[];
   tasks: TaskRecord[];
-}
-
-interface RegisterRequest {
-  name?: string;
-  email?: string;
-  password?: string;
-}
-
-interface LoginRequest {
-  email?: string;
-  password?: string;
-}
-
-interface CreateProjectRequest {
-  name?: string;
-  description?: string;
-}
-
-interface UpdateProjectRequest {
-  name?: string;
-  description?: string;
-}
-
-interface CreateTaskRequest {
-  title?: string;
-  description?: string;
-  status?: TaskStatus;
-  priority?: TaskPriority;
-  assignee_id?: string | null;
-  due_date?: string | null;
-}
-
-type UpdateTaskRequest = Partial<
-  Pick<
-    TaskRecord,
-    'title' | 'description' | 'status' | 'priority' | 'assignee_id' | 'due_date'
-  >
->;
-
-interface TokenPayload {
-  userId: string;
-  exp: number;
 }
 
 type ValidationFields = Record<string, string>;
@@ -242,33 +168,14 @@ const db: Database = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const createId = (): string => {
-  // TODO:
-  // Generate and return a unique string ID.
-  //
-  // Hint:
-  // You can use Date.now() + a random value.
   return `user-${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 };
 
 const getCurrentDate = (): string => {
-  // TODO:
-  // Return the current date/time in ISO format.
   return new Date().toISOString();
 };
 
 const makeToken = (userId: string): string => {
-  // TODO:
-  // Create a mock authentication token.
-  //
-  // Token payload must contain:
-  // - userId
-  // - expiration time
-  //
-  // Token should expire after 24 hours.
-  //
-  // Hint:
-  // Use JSON.stringify() and btoa().
-
   const payload = {
     userId,
     exp: Date.now() + 24 * 60 * 60 * 1000,
@@ -278,12 +185,6 @@ const makeToken = (userId: string): string => {
 };
 
 const getPublicUser = (user: User): PublicUser => {
-  // TODO:
-  // Convert User into PublicUser.
-  //
-  // IMPORTANT:
-  // Never expose the user's password.
-
   //not returning the password field to ensure security and privacy of user data
   const { id, name, email } = user;
 
@@ -291,20 +192,6 @@ const getPublicUser = (user: User): PublicUser => {
 };
 
 const getUser = (request: Request): User | null => {
-  // TODO:
-  // Extract the currently authenticated user.
-  //
-  // Steps:
-  // 1. Read the Authorization header.
-  // 2. Extract the Bearer token.
-  // 3. Decode the token.
-  // 4. Validate that userId exists.
-  // 5. Check token expiration.
-  // 6. Find the user in db.users.
-  // 7. Return null for invalid authentication.
-  //
-  // IMPORTANT:
-  // Invalid tokens must not crash the application.
   try {
     const authorization = request.headers.get('Authorization');
     const token = authorization?.match(/^Bearer\s+(.+)$/i)?.[1];
@@ -333,49 +220,18 @@ const getUser = (request: Request): User | null => {
 };
 
 const unauthorized = () => {
-  // TODO:
-  // Return JSON:
-  //
-  // { error: 'unauthorized' }
-  //
-  // HTTP status: 401
-
   return HttpResponse.json({ error: 'unauthorized' }, { status: 401 });
 };
 
 const notFound = () => {
-  // TODO:
-  // Return JSON:
-  //
-  // { error: 'not found' }
-  //
-  // HTTP status: 404
-
   return HttpResponse.json({ error: 'not found' }, { status: 404 });
 };
 
 const forbidden = () => {
-  // TODO:
-  // Return JSON:
-  //
-  // { error: 'forbidden' }
-  //
-  // HTTP status: 403
-
   return HttpResponse.json({ error: 'forbidden' }, { status: 403 });
 };
 
 const validationError = (fields: ValidationFields) => {
-  // TODO:
-  // Return a validation error containing:
-  //
-  // {
-  //   error: 'validation failed',
-  //   fields
-  // }
-  //
-  // HTTP status: 400
-
   return HttpResponse.json(
     { error: 'validation failed', fields },
     { status: 400 },
@@ -383,13 +239,6 @@ const validationError = (fields: ValidationFields) => {
 };
 
 const getParam = (param: string | readonly string[] | undefined): string => {
-  // TODO:
-  // MSW route params may contain different value types.
-  //
-  // Convert the given route parameter into a string.
-  //
-  // Return an empty string when no valid value exists.
-
   if (typeof param === 'string') {
     return param;
   }
@@ -566,17 +415,36 @@ export const handlers = [
     });
   }),
 
+  // POST /auth/forgot-password
+  http.post(`${BASE_URL}/auth/forgot-password`, async ({ request }) => {
+    const body = await readJsonBody(request);
+
+    if (!body) {
+      return validationError({
+        email: 'Email is required',
+      });
+    }
+
+    if (typeof body.email !== 'string' || !body.email.trim()) {
+      return validationError({
+        email: 'Email is required',
+      });
+    }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(body.email.trim())) {
+      return validationError({
+        email: 'Enter a valid email address',
+      });
+    }
+
+    return HttpResponse.json({
+      message:
+        'If an account exists for that email, a password reset link has been sent',
+    });
+  }),
+
   // GET /auth/me
   http.get(`${BASE_URL}/auth/me`, ({ request }) => {
-    // TODO:
-    //
-    // 1. Get authenticated user from request.
-    // 2. Return 401 when authentication is invalid.
-    // 3. Return PublicUser.
-    //
-    // IMPORTANT:
-    // Password must not be returned.
-
     const user = getUser(request);
 
     if (!user) {
@@ -803,30 +671,6 @@ export const handlers = [
 
   // GET /projects/:id/tasks
   http.get(`${BASE_URL}/projects/:id/tasks`, ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find project.
-    // 3. Handle 404.
-    // 4. Check project ownership.
-    // 5. Handle 403.
-    // 6. Read query parameters.
-    //
-    // Supported filters:
-    // - status
-    // - priority
-    // - assignee
-    // - search
-    //
-    // 7. Get tasks belonging to the project.
-    // 8. Apply provided filters.
-    // 9. Search should check title and description.
-    // 10. Search should be case-insensitive.
-    // 11. Return:
-    //
-    // {
-    //   tasks: [...]
-    // }
     // 1. Authenticate the current user
     const user = getUser(request);
 
@@ -853,8 +697,22 @@ export const handlers = [
 
     const status = url.searchParams.get('status');
     const priority = url.searchParams.get('priority');
-    const assignee = url.searchParams.get('assignee');
+    const assigneeId = url.searchParams.get('assignee_id');
     const search = url.searchParams.get('search')?.trim().toLowerCase();
+
+    const fields: ValidationFields = {};
+
+    if (status !== null && !isTaskStatus(status)) {
+      fields.status = 'Invalid task status';
+    }
+
+    if (priority !== null && !isTaskPriority(priority)) {
+      fields.priority = 'Invalid task priority';
+    }
+
+    if (Object.keys(fields).length > 0) {
+      return validationError(fields);
+    }
 
     // 5. Get tasks belonging to this project
     let tasks = db.tasks.filter((task) => task.project_id === project.id);
@@ -868,8 +726,8 @@ export const handlers = [
       tasks = tasks.filter((task) => task.priority === priority);
     }
 
-    if (assignee) {
-      tasks = tasks.filter((task) => task.assignee_id === assignee);
+    if (assigneeId) {
+      tasks = tasks.filter((task) => task.assignee_id === assigneeId);
     }
 
     // 7. Search in title and description
@@ -1064,19 +922,7 @@ export const handlers = [
     return HttpResponse.json(task);
   }),
 
-  // DELETE /tasks/:id
   http.delete(`${BASE_URL}/tasks/:id`, ({ request, params }) => {
-    // TODO:
-    //
-    // 1. Authenticate user.
-    // 2. Find task.
-    // 3. Handle 404.
-    // 4. Find parent project.
-    // 5. Check project ownership.
-    // 6. Handle 403.
-    // 7. Delete task from db.tasks.
-    // 8. Return HTTP 204 No Content.
-
     // 1. Authenticate the current user
     const user = getUser(request);
 

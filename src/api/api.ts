@@ -31,6 +31,14 @@ interface LoginData {
   password: string;
 }
 
+export interface ForgotPasswordData {
+  email: string;
+}
+
+export interface ForgotPasswordResponse {
+  message: string;
+}
+
 type HttpMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 
 interface ApiErrorResponse {
@@ -91,7 +99,7 @@ type UpdateTaskData = Partial<CreateTaskData>;
 type TaskFilters = {
   status?: TaskStatus;
   priority?: TaskPriority;
-  assignee?: string;
+  assignee_id?: string;
   search?: string;
 };
 
@@ -137,7 +145,7 @@ const toTaskPayload = (data: CreateTaskData | UpdateTaskData) => {
 
   return payload;
 };
-class ApiError extends Error {
+export class ApiError extends Error {
   constructor(
     message: string,
     public status: number,
@@ -148,9 +156,6 @@ class ApiError extends Error {
   }
 }
 const getToken = (): string | null => {
-  // TODO:
-  // Read "tf_token" from localStorage.
-
   return localStorage.getItem('tf_token');
 };
 
@@ -158,62 +163,7 @@ const getToken = (): string | null => {
 // TODO 3: HTTP request helper
 // ─────────────────────────────────────────────────────────────────────────────
 
-// TODO:
-// Replace "string" with a proper HttpMethod type.
-//
-// Only allow:
-// GET
-// POST
-// PATCH
-// DELETE
-
 const request = async <T>(
-  // TODO:
-  // 1. Create the HTTP headers.
-  //
-  // Content-Type should be:
-  // application/json
-
-  // TODO:
-  // 2. If auth === true:
-  // - Get the token using getToken()
-  // - Throw an Error if the token doesn't exist
-  // - Add the Authorization header
-  //
-  // Expected format:
-  // Bearer <token>
-
-  // TODO:
-  // 3. Send the request using fetch().
-  //
-  // Use:
-  // - BASE_URL
-  // - path
-  // - method
-  // - headers
-  // - body
-
-  // TODO:
-  // 4. Handle status 204 No Content.
-
-  // TODO:
-  // 5. Parse the JSON response.
-
-  // TODO:
-  // 6. Handle unsuccessful HTTP responses.
-  //
-  // Example API validation error:
-  //
-  // {
-  //   error: "validation failed",
-  //   fields: {
-  //     email: "already taken"
-  //   }
-  // }
-
-  // TODO:
-  // 7. Return the successful response.
-
   method: HttpMethod,
   path: string,
   body?: unknown,
@@ -233,11 +183,17 @@ const request = async <T>(
     headers.set('Authorization', `Bearer ${token}`);
   }
 
-  const response = await fetch(`${BASE_URL}${path}`, {
-    method,
-    headers,
-    ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
-  });
+  let response: Response;
+
+  try {
+    response = await fetch(`${BASE_URL}${path}`, {
+      method,
+      headers,
+      ...(body !== undefined ? { body: JSON.stringify(body) } : {}),
+    });
+  } catch {
+    throw new ApiError('Network error', 0);
+  }
 
   if (response.status === 204) {
     return undefined as T;
@@ -275,14 +231,6 @@ const request = async <T>(
 // ─────────────────────────────────────────────────────────────────────────────
 // TODO 4: HTTP helpers
 // ─────────────────────────────────────────────────────────────────────────────
-
-// TODO:
-// Create reusable helper functions for:
-//
-// get<T>()
-// post<T>()
-// patch<T>()
-// del<T>()
 const get = <T>(path: string, auth = true): Promise<T> =>
   request<T>('GET', path, undefined, auth);
 
@@ -304,40 +252,25 @@ const saveSession = (response: AuthResponse): void => {
 export const registerUser = async (
   data: RegisterData,
 ): Promise<AuthResponse> => {
-  // TODO:
-  // Replace "unknown" with your RegisterData and AuthResponse types.
-  //
-  // POST /auth/register
-  //
-  // Authentication is NOT required.
-  //
-  // After successful registration:
-  // - Save the token
-  // - Save the user
-  // - Return the response
-
   const response = await post<AuthResponse>('/auth/register', data, false);
   saveSession(response);
   return response;
 };
 
 export const loginUser = async (data: LoginData): Promise<AuthResponse> => {
-  // TODO:
-  // Replace "unknown" with the correct TypeScript types.
-  //
-  // POST /auth/login
-  //
-  // Authentication is NOT required.
-  //
-  // After success:
-  // - Save token
-  // - Save user
-  // - Return response
-
   const response = await post<AuthResponse>('/auth/login', data, false);
-
   saveSession(response);
   return response;
+};
+
+export const requestPasswordReset = async (
+  data: ForgotPasswordData,
+): Promise<ForgotPasswordResponse> => {
+  return post<ForgotPasswordResponse>(
+    '/auth/forgot-password',
+    data,
+    false,
+  );
 };
 
 export const getMe = (): User | null => {
@@ -376,30 +309,11 @@ export const logout = (): void => {
   localStorage.removeItem('tf_user');
 };
 
-// TODO:
-// Create a private saveSession() helper.
-//
-// It should save:
-// - token as "tf_token"
-// - user as "tf_user"
-
 // ─────────────────────────────────────────────────────────────────────────────
 // TODO 6: Projects API
 // ─────────────────────────────────────────────────────────────────────────────
 
 export const fetchProjects = async (): Promise<Project[]> => {
-  // TODO:
-  // Replace "unknown[]" with the proper type.
-  //
-  // GET /projects
-  //
-  // Expected response:
-  //
-  // {
-  //   projects: [...]
-  // }
-  //
-  // Return ONLY the projects array.
   const response = await get<{ projects: Project[] }>('/projects');
   return response.projects;
 };
@@ -446,19 +360,6 @@ export const fetchTasks = async (
   projectId: string,
   filters: TaskFilters = {},
 ): Promise<Task[]> => {
-  // TODO:
-  // Replace temporary types with your Task and TaskFilters types.
-  //
-  // GET /projects/:projectId/tasks
-  //
-  // Build the query string using URLSearchParams.
-  //
-  // Example:
-  //
-  // /projects/proj-001/tasks?status=todo&priority=high
-  //
-  // Do NOT add undefined filter values.
-
   const query = new URLSearchParams();
 
   Object.entries(filters).forEach(([key, value]) => {
