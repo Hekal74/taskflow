@@ -1,0 +1,18 @@
+flowchart TD
+    User[User] --> App[TaskFlow React Application]
+
+    App --> Router[React Router]
+    App --> Features[Feature Pages and Components]
+    App --> Shared[Reusable Layout and UI]
+
+    Features --> API[Centralized API Client]
+    API --> Mapping[camelCase or snake_case Mapping]
+    API --> MSW[MSW Mock API]
+
+    MSW --> Auth[Authentication Handlers]
+    MSW --> Projects[Projects Handlers]
+    MSW --> Tasks[Tasks Handlers]
+
+    Auth --> Data[(In-Memory Mock Data)]
+    Projects --> Data
+    Tasks --> Data

@@ -1,0 +1,22 @@
+sequenceDiagram
+    actor User
+    participant UI as React Page or Component
+    participant API as API Client
+    participant MSW as MSW Handler
+    participant Data as Mock Data
+
+    User->>UI: Create a new task
+    UI->>API: createTask(taskData)
+    API->>API: Map camelCase payload to snake_case
+    API->>MSW: POST /projects/:id/tasks
+
+    MSW->>MSW: Validate request
+    MSW->>MSW: Check authentication
+    MSW->>MSW: Check project ownership
+    MSW->>Data: Save new task
+
+    Data-->>MSW: Created task
+    MSW-->>API: 201 Created
+    API->>API: Map snake_case response to camelCase
+    API-->>UI: Return frontend task
+    UI-->>User: Update task list
