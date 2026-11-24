@@ -9,7 +9,7 @@ import {
   it,
   jest,
 } from '@jest/globals';
-import { handlers } from '../mocks/handlers';
+import { handlers, initializeMockDatabase } from '../mocks/handlers';
 import {
   ApiError,
   createProject,
@@ -63,6 +63,10 @@ Object.defineProperty(globalThis, 'localStorage', {
 const server = setupServer(...handlers);
 
 beforeAll(() => server.listen({ onUnhandledRequest: 'error' }));
+beforeEach(() => {
+  localStorage.clear();
+  initializeMockDatabase();
+});
 afterEach(() => {
   server.resetHandlers();
   logout();
@@ -77,6 +81,61 @@ const authenticate = async (): Promise<void> => {
 };
 
 describe('authentication', () => {
+  it('persists the seed database with its existing relationships', () => {
+    const database = JSON.parse(
+      localStorage.getItem('taskflow_mock_database') ?? 'null',
+    ) as {
+      users: Array<{ id: string }>;
+      projects: Array<{ id: string; owner_id: string }>;
+      tasks: Array<{
+        id: string;
+        project_id: string;
+        assignee_id: string | null;
+      }>;
+    };
+
+    expect(database.users).toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: 'seed-001' })]),
+    );
+    expect(database.projects).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: 'proj-001', owner_id: 'seed-001' }),
+      ]),
+    );
+    expect(database.tasks).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: 'task-001',
+          project_id: 'proj-001',
+          assignee_id: 'seed-001',
+        }),
+      ]),
+    );
+  });
+
+  it('persists registered users and allows them to log in after reinitialization', async () => {
+    await registerUser({
+      name: 'Persistent User',
+      email: 'persistent@example.com',
+      password: 'password123',
+    });
+
+    initializeMockDatabase();
+    logout();
+
+    await expect(
+      loginUser({
+        email: 'persistent@example.com',
+        password: 'password123',
+      }),
+    ).resolves.toMatchObject({
+      user: {
+        name: 'Persistent User',
+        email: 'persistent@example.com',
+      },
+    });
+  });
+
   it('logs in and rejects invalid credentials', async () => {
     await authenticate();
     expect(localStorage.getItem('tf_token')).toBeTruthy();
@@ -218,6 +277,71 @@ describe('network and CRUD', () => {
 
     await expect(fetchProjects()).resolves.toEqual(
       expect.arrayContaining([expect.objectContaining({ id: 'proj-001' })]),
+    );
+  });
+
+  it('persists project and task changes, including cascading project deletion', async () => {
+    await authenticate();
+
+    const project = await createProject({
+      name: 'Persistent Project',
+      description: 'Stored across reloads',
+    });
+
+    initializeMockDatabase();
+    await expect(fetchProjectById(project.id)).resolves.toMatchObject({
+      name: 'Persistent Project',
+    });
+
+    await updateProject(project.id, { name: 'Updated Persistent Project' });
+
+    const task = await createTask(project.id, {
+      title: 'Persistent task',
+      assignee: 'seed-001',
+    });
+
+    initializeMockDatabase();
+    await expect(fetchTasks(project.id)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: task.id,
+          title: 'Persistent task',
+          assignee: 'seed-001',
+        }),
+      ]),
+    );
+
+    await updateTask(task.id, { title: 'Updated persistent task' });
+    initializeMockDatabase();
+
+    await expect(fetchProjectById(project.id)).resolves.toMatchObject({
+      name: 'Updated Persistent Project',
+    });
+    await expect(fetchTasks(project.id)).resolves.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          id: task.id,
+          title: 'Updated persistent task',
+        }),
+      ]),
+    );
+
+    await deleteProject(project.id);
+
+    const persistedDatabase = JSON.parse(
+      localStorage.getItem('taskflow_mock_database') ?? 'null',
+    ) as {
+      projects: Array<{ id: string }>;
+      tasks: Array<{ id: string; project_id: string }>;
+    };
+
+    expect(persistedDatabase.projects).not.toEqual(
+      expect.arrayContaining([expect.objectContaining({ id: project.id })]),
+    );
+    expect(persistedDatabase.tasks).not.toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({ id: task.id, project_id: project.id }),
+      ]),
     );
   });
 });

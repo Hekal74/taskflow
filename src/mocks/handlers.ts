@@ -54,13 +54,13 @@ interface Database {
 type ValidationFields = Record<string, string>;
 
 // ─────────────────────────────────────────────────────────────────────────────
-// In-memory Database
+// Mock Database
 // ─────────────────────────────────────────────────────────────────────────────
 //
 // This data is provided to simulate a backend database.
 // Students should NOT modify the initial data unless necessary for testing.
 
-const db: Database = {
+const createSeedDatabase = (): Database => ({
   users: [
     {
       id: 'seed-001',
@@ -161,6 +161,104 @@ const db: Database = {
       updated_at: '2026-04-02T10:00:00Z',
     },
   ],
+});
+
+const DATABASE_STORAGE_KEY = 'taskflow_mock_database';
+
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  value !== null && typeof value === 'object' && !Array.isArray(value);
+
+const isUser = (value: unknown): value is User =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.name === 'string' &&
+  typeof value.email === 'string' &&
+  typeof value.password === 'string';
+
+const isProject = (value: unknown): value is Project =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.name === 'string' &&
+  typeof value.description === 'string' &&
+  (value.owner_id === undefined || typeof value.owner_id === 'string') &&
+  (value.created_at === undefined || typeof value.created_at === 'string') &&
+  (value.task_count === undefined || typeof value.task_count === 'number') &&
+  (value.done_count === undefined || typeof value.done_count === 'number');
+
+const isTaskRecord = (value: unknown): value is TaskRecord =>
+  isRecord(value) &&
+  typeof value.id === 'string' &&
+  typeof value.project_id === 'string' &&
+  typeof value.title === 'string' &&
+  typeof value.description === 'string' &&
+  (value.status === 'todo' ||
+    value.status === 'in_progress' ||
+    value.status === 'done') &&
+  (value.priority === 'low' ||
+    value.priority === 'medium' ||
+    value.priority === 'high') &&
+  (value.assignee_id === null || typeof value.assignee_id === 'string') &&
+  (value.due_date === null || typeof value.due_date === 'string') &&
+  typeof value.created_at === 'string' &&
+  typeof value.updated_at === 'string';
+
+const isDatabase = (value: unknown): value is Database =>
+  isRecord(value) &&
+  Array.isArray(value.users) &&
+  value.users.every(isUser) &&
+  Array.isArray(value.projects) &&
+  value.projects.every(isProject) &&
+  Array.isArray(value.tasks) &&
+  value.tasks.every(isTaskRecord);
+
+const getStorage = (): Storage | null => {
+  try {
+    return globalThis.localStorage ?? null;
+  } catch {
+    return null;
+  }
+};
+
+const persistDatabase = (database: Database): void => {
+  try {
+    getStorage()?.setItem(DATABASE_STORAGE_KEY, JSON.stringify(database));
+  } catch (error) {
+    console.warn('Unable to persist the mock database', error);
+  }
+};
+
+const loadDatabase = (): Database => {
+  const storage = getStorage();
+
+  if (!storage) {
+    return createSeedDatabase();
+  }
+
+  try {
+    const storedDatabase = storage.getItem(DATABASE_STORAGE_KEY);
+
+    if (storedDatabase !== null) {
+      const parsed: unknown = JSON.parse(storedDatabase);
+
+      if (isDatabase(parsed)) {
+        return parsed;
+      }
+
+      console.warn('Ignoring invalid persisted mock database');
+    }
+  } catch (error) {
+    console.warn('Unable to load the persisted mock database', error);
+  }
+
+  const database = createSeedDatabase();
+  persistDatabase(database);
+  return database;
+};
+
+let db: Database = loadDatabase();
+
+export const initializeMockDatabase = (): void => {
+  db = loadDatabase();
 };
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -355,6 +453,7 @@ export const handlers = [
     };
 
     db.users.push(user);
+    persistDatabase(db);
 
     const token = makeToken(user.id);
 
@@ -537,6 +636,7 @@ export const handlers = [
 
     // 5. Save it in the mock database
     db.projects.push(project);
+    persistDatabase(db);
 
     // 6. Return the created project
     return HttpResponse.json(project, { status: 201 });
@@ -627,6 +727,8 @@ export const handlers = [
       project.description = (body.description as string).trim();
     }
 
+    persistDatabase(db);
+
     return HttpResponse.json(project);
   }),
 
@@ -660,6 +762,7 @@ export const handlers = [
 
     // 5. Delete its associated tasks
     db.tasks = db.tasks.filter((task) => task.project_id !== project.id);
+    persistDatabase(db);
 
     // 6. Return No Content
     return new HttpResponse(null, { status: 204 });
@@ -820,6 +923,7 @@ export const handlers = [
     };
 
     db.tasks.push(task);
+    persistDatabase(db);
 
     return HttpResponse.json(task, { status: 201 });
   }),
@@ -918,6 +1022,7 @@ export const handlers = [
     }
 
     task.updated_at = getCurrentDate();
+    persistDatabase(db);
 
     return HttpResponse.json(task);
   }),
@@ -953,6 +1058,7 @@ export const handlers = [
 
     // 5. Delete the task
     db.tasks = db.tasks.filter((item) => item.id !== task.id);
+    persistDatabase(db);
 
     // 6. Return No Content
     return new HttpResponse(null, { status: 204 });
