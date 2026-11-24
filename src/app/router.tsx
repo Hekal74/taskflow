@@ -12,6 +12,7 @@ import RegisterPage from '../features/auth/RegisterPage';
 import DashboardPage from '../features/dashboard/DashboardPage';
 import ProjectDetailsPage from '../features/projects/ProjectDetailsPage';
 import ProjectsPage from '../features/projects/ProjectsPage';
+import AppShell from './AppShell';
 
 function RootRedirect() {
   const { user } = useAuth();
@@ -37,18 +38,9 @@ function ProtectedRoutes() {
   };
 
   return (
-    <>
-      <header className="app-header">
-        <span>TaskFlow</span>
-        <span>Signed in as {user.name}</span>
-        <button type="button" onClick={handleLogout}>
-          Log out
-        </button>
-      </header>
-      <main>
-        <Outlet />
-      </main>
-    </>
+    <AppShell user={user} onLogout={handleLogout}>
+      <Outlet />
+    </AppShell>
   );
 }
 

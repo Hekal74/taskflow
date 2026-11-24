@@ -9,6 +9,7 @@ describe('TaskCard', () => {
   it('renders task details and exposes its actions', () => {
     const onEdit = jest.fn();
     const onDelete = jest.fn();
+    const onStatusChange = jest.fn();
     const task = {
       id: 'task-1',
       projectId: 'project-1',
@@ -27,6 +28,8 @@ describe('TaskCard', () => {
         task={task}
         onEdit={onEdit}
         onDelete={onDelete}
+        onStatusChange={onStatusChange}
+        isUpdatingStatus={false}
         currentUserId="user-1"
         currentUserName="Alex"
       />,
@@ -38,6 +41,12 @@ describe('TaskCard', () => {
     expect(screen.getByText('high priority')).toBeVisible();
     expect(screen.getByText('Assigned to Alex')).toBeVisible();
 
+    fireEvent.change(
+      screen.getByRole('combobox', {
+        name: `Change status for ${task.title}`,
+      }),
+      { target: { value: 'done' } },
+    );
     fireEvent.click(
       screen.getByRole('button', { name: 'Edit Review release notes' }),
     );
@@ -47,5 +56,6 @@ describe('TaskCard', () => {
 
     expect(onEdit).toHaveBeenCalledWith(task);
     expect(onDelete).toHaveBeenCalledWith(task);
+    expect(onStatusChange).toHaveBeenCalledWith(task, 'done');
   });
 });

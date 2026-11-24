@@ -1,6 +1,7 @@
 import { RouterProvider } from 'react-router-dom';
 import { router } from './router';
 import { AuthProvider, useAuth } from '../features/auth/AuthContext';
+import { ThemeProvider } from '../theme/ThemeProvider';
 
 function ApplicationRouter() {
   const { isInitializing, initializationError, retryInitialization } = useAuth();
@@ -29,9 +30,11 @@ function ApplicationRouter() {
 
 function App() {
   return (
-    <AuthProvider>
-      <ApplicationRouter />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ApplicationRouter />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }
 
