@@ -120,6 +120,22 @@
   }
 }
 
+.project-card__link {
+  color: inherit;
+  text-decoration: none;
+
+  &:hover {
+    color: #3659c9;
+    text-decoration: underline;
+  }
+
+  &:focus-visible {
+    border-radius: 3px;
+    outline: 3px solid rgb(54 89 201 / 25%);
+    outline-offset: 3px;
+  }
+}
+
 .project-card__description {
   min-height: 42px;
   margin: 8px 0 22px;

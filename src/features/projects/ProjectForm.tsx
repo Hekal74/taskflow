@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from 'react';
 import { ApiError, createProject, updateProject } from '../../api/api';
 import type { fetchProjects } from '../../api/api';
+import { getCrudErrorMessage } from './crudErrorMessage';
 
 type Project = Awaited<ReturnType<typeof fetchProjects>>[number];
 type ProjectData = Parameters<typeof createProject>[0];
@@ -8,10 +9,11 @@ type ProjectData = Parameters<typeof createProject>[0];
 interface ProjectFormProps {
   project?: Project;
   onSaved: (project: Project) => void;
+  onError: (message: string) => void;
   onCancel: () => void;
 }
 
-function ProjectForm({ project, onSaved, onCancel }: ProjectFormProps) {
+function ProjectForm({ project, onSaved, onError, onCancel }: ProjectFormProps) {
   const [name, setName] = useState(project?.name ?? '');
   const [description, setDescription] = useState(project?.description ?? '');
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
@@ -43,15 +45,20 @@ function ProjectForm({ project, onSaved, onCancel }: ProjectFormProps) {
         : await createProject(data);
       onSaved(savedProject);
     } catch (submitError) {
-      if (submitError instanceof ApiError) {
-        setFieldErrors(submitError.fields ?? {});
-        setError(
-          Object.keys(submitError.fields ?? {}).length > 0
-            ? 'Please correct the highlighted fields.'
-            : submitError.message,
-        );
+      const fields =
+        submitError instanceof ApiError ? submitError.fields : undefined;
+      setFieldErrors(fields ?? {});
+
+      if (Object.keys(fields ?? {}).length > 0) {
+        setError('Please correct the highlighted fields.');
       } else {
-        setError('Unable to save the project. Please try again.');
+        setError('');
+        onError(
+          getCrudErrorMessage(
+            submitError,
+            'Failed to save project. Please try again.',
+          ),
+        );
       }
     } finally {
       setIsSubmitting(false);

@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react';
 import { ApiError, deleteProject, fetchProjects } from '../../api/api';
+import { getCrudErrorMessage } from './crudErrorMessage';
 import ProjectCard from './ProjectCard';
 import ProjectForm from './ProjectForm';
+import Toast from './Toast';
+import { useToast } from './useToast';
 import './projects.scss';
 
 type Project = Awaited<ReturnType<typeof fetchProjects>>[number];
@@ -14,7 +17,7 @@ function ProjectsPage() {
   const [formProject, setFormProject] = useState<Project | null | undefined>(
     undefined,
   );
-  const [deleteError, setDeleteError] = useState('');
+  const { toast, showToast } = useToast();
 
   useEffect(() => {
     let active = true;
@@ -41,6 +44,10 @@ function ProjectsPage() {
   }, [reloadKey]);
 
   const handleSaved = (project: Project) => {
+    showToast(
+      formProject ? 'Project updated successfully' : 'Project created successfully',
+      'success',
+    );
     setProjects((current) => {
       const exists = current.some((item) => item.id === project.id);
       return exists
@@ -65,18 +72,19 @@ function ProjectsPage() {
     );
     if (!confirmed) return;
 
-    setDeleteError('');
-
     try {
       await deleteProject(project.id);
       setProjects((current) =>
         current.filter((item) => item.id !== project.id),
       );
+      showToast('Project deleted successfully', 'success');
     } catch (error) {
-      setDeleteError(
-        error instanceof ApiError
-          ? error.message
-          : 'Unable to delete the project. Please try again.',
+      showToast(
+        getCrudErrorMessage(
+          error,
+          'Failed to delete project. Please try again.',
+        ),
+        'error',
       );
     }
   };
@@ -89,6 +97,7 @@ function ProjectsPage() {
 
   return (
     <section className="feature-page">
+      <Toast toast={toast} />
       <header className="page-heading">
         <div>
           <p className="eyebrow">Workspace</p>
@@ -106,16 +115,13 @@ function ProjectsPage() {
         )}
       </header>
 
-      {deleteError && (
-        <p className="message message--error" role="alert">{deleteError}</p>
-      )}
-
       {formProject !== undefined && (
         <div className="form-panel">
           <ProjectForm
             key={formProject?.id ?? 'new'}
             project={formProject ?? undefined}
             onSaved={handleSaved}
+            onError={(message) => showToast(message, 'error')}
             onCancel={() => setFormProject(undefined)}
           />
         </div>

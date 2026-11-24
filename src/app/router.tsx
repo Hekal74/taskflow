@@ -4,13 +4,13 @@ import {
   Navigate,
   Outlet,
   useNavigate,
-  useParams,
 } from 'react-router-dom';
 import { useAuth } from '../features/auth/AuthContext';
 import ForgotPasswordPage from '../features/auth/ForgotPasswordPage';
 import LoginPage from '../features/auth/LoginPage';
 import RegisterPage from '../features/auth/RegisterPage';
 import DashboardPage from '../features/dashboard/DashboardPage';
+import ProjectDetailsPage from '../features/projects/ProjectDetailsPage';
 import ProjectsPage from '../features/projects/ProjectsPage';
 
 function RootRedirect() {
@@ -50,12 +50,6 @@ function ProtectedRoutes() {
       </main>
     </>
   );
-}
-
-function ProjectDetailsPage() {
-  const { projectId } = useParams();
-
-  return <h1>Project {projectId}</h1>;
 }
 
 export const router = createBrowserRouter([

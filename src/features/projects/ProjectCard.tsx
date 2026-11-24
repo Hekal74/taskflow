@@ -1,4 +1,5 @@
 import type { fetchProjects } from '../../api/api';
+import { Link } from 'react-router-dom';
 
 type Project = Awaited<ReturnType<typeof fetchProjects>>[number];
 
@@ -20,7 +21,11 @@ function ProjectCard({ project, onEdit, onDelete }: ProjectCardProps) {
     <article className="project-card">
       <div className="project-card__top">
         <div>
-          <h2>{project.name}</h2>
+          <h2>
+            <Link className="project-card__link" to={`/projects/${project.id}`}>
+              {project.name}
+            </Link>
+          </h2>
           <p className="project-card__description">
             {project.description || 'No description provided.'}
           </p>
