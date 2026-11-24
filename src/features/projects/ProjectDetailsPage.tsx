@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import {
   ApiError,
@@ -11,6 +11,12 @@ import TaskCard from './TaskCard';
 import TaskForm from './TaskForm';
 import Toast from './Toast';
 import { getCrudErrorMessage } from './crudErrorMessage';
+import {
+  filterTasks,
+  getTaskSummary,
+  initialTaskFilters,
+  type TaskFilters,
+} from './taskListUtils';
 import { useToast } from './useToast';
 import './project-details.scss';
 import './projects.scss';
@@ -52,7 +58,18 @@ function ProjectDetails({ projectId }: { projectId: string }) {
   const [isNotFound, setIsNotFound] = useState(false);
   const [reloadKey, setReloadKey] = useState(0);
   const [taskForm, setTaskForm] = useState<Task | null | undefined>(undefined);
+  const [filters, setFilters] = useState<TaskFilters>(initialTaskFilters);
   const { toast, showToast } = useToast();
+  const taskSummary = useMemo(() => getTaskSummary(tasks), [tasks]);
+  const visibleTasks = useMemo(
+    () => filterTasks(tasks, filters, user?.id),
+    [tasks, filters, user?.id],
+  );
+  const hasActiveFilters =
+    filters.search.trim() !== '' ||
+    filters.status !== 'all' ||
+    filters.priority !== 'all' ||
+    filters.assignee !== 'all';
 
   useEffect(() => {
     let active = true;
@@ -196,7 +213,120 @@ function ProjectDetails({ projectId }: { projectId: string }) {
               <p className="eyebrow">Project work</p>
               <h2>Tasks</h2>
             </div>
-            <span>{tasks.length} {tasks.length === 1 ? 'task' : 'tasks'}</span>
+            <span>
+              {visibleTasks.length} of {tasks.length} tasks
+            </span>
+          </div>
+
+          <section className="task-summary" aria-label="Project task progress">
+            <div className="task-summary__metrics">
+              <article>
+                <span>Total tasks</span>
+                <strong>{taskSummary.total}</strong>
+              </article>
+              <article>
+                <span>Completed</span>
+                <strong>{taskSummary.completed}</strong>
+              </article>
+              <article>
+                <span>Remaining</span>
+                <strong>{taskSummary.remaining}</strong>
+              </article>
+              <article>
+                <span>Completion</span>
+                <strong>{taskSummary.completion}%</strong>
+              </article>
+            </div>
+            <div
+              className="task-summary__progress"
+              role="progressbar"
+              aria-label="Project completion"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={taskSummary.completion}
+            >
+              <span style={{ width: `${taskSummary.completion}%` }} />
+            </div>
+            <div className="task-summary__statuses" aria-label="Task counts by status">
+              <span>To do: {taskSummary.byStatus.todo}</span>
+              <span>In progress: {taskSummary.byStatus.in_progress}</span>
+              <span>Done: {taskSummary.byStatus.done}</span>
+            </div>
+          </section>
+
+          <div className="task-filters" aria-label="Filter project tasks">
+            <label>
+              Search tasks
+              <input
+                type="search"
+                value={filters.search}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    search: event.target.value,
+                  }))
+                }
+                placeholder="Search title or description"
+              />
+            </label>
+            <label>
+              Status
+              <select
+                value={filters.status}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    status: event.target.value as TaskFilters['status'],
+                  }))
+                }
+              >
+                <option value="all">All statuses</option>
+                <option value="todo">To do</option>
+                <option value="in_progress">In progress</option>
+                <option value="done">Done</option>
+              </select>
+            </label>
+            <label>
+              Priority
+              <select
+                value={filters.priority}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    priority: event.target.value as TaskFilters['priority'],
+                  }))
+                }
+              >
+                <option value="all">All priorities</option>
+                <option value="low">Low</option>
+                <option value="medium">Medium</option>
+                <option value="high">High</option>
+              </select>
+            </label>
+            <label>
+              Assignee
+              <select
+                value={filters.assignee}
+                onChange={(event) =>
+                  setFilters((current) => ({
+                    ...current,
+                    assignee: event.target.value as TaskFilters['assignee'],
+                  }))
+                }
+              >
+                <option value="all">All assignees</option>
+                <option value="mine">My tasks</option>
+                <option value="unassigned">Unassigned</option>
+              </select>
+            </label>
+            <button
+              type="button"
+              className="button button--secondary"
+              onClick={() => setFilters(initialTaskFilters)}
+              disabled={!hasActiveFilters}
+            >
+              Reset filters
+            </button>
           </div>
 
           {tasks.length === 0 ? (
@@ -212,9 +342,22 @@ function ProjectDetails({ projectId }: { projectId: string }) {
                 Create the first task
               </button>
             </div>
+          ) : visibleTasks.length === 0 ? (
+            <div className="empty-state">
+              <h2>No matching tasks</h2>
+              <p>Try changing or clearing the filters.</p>
+              <button
+                type="button"
+                className="button button--secondary"
+                onClick={() => setFilters(initialTaskFilters)}
+                disabled={!hasActiveFilters}
+              >
+                Reset filters
+              </button>
+            </div>
           ) : (
             <div className="task-list">
-              {tasks.map((task) => (
+              {visibleTasks.map((task) => (
                 <TaskCard
                   key={task.id}
                   task={task}
