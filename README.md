@@ -68,7 +68,7 @@ A modern task and project management application built with React and TypeScript
 
 ### Prerequisites
 
-- Node.js (18+)
+- Node.js 20.19+ or 22.12+
 - npm
 
 ### Installation
@@ -109,7 +109,7 @@ npm run dev
 Vite will display the local development URL in the terminal, usually:
 
 ```text
-http://localhost:5173
+`http://localhost:5173`
 ```
 
 ## Available Scripts
