@@ -1,94 +1,103 @@
-# TaskFlow - Requirements
+# TaskFlow Requirements
 
 ## 1. Project Overview
 
-TaskFlow is a web-based task management application that
-allows users to organize projects, manage tasks, track
-their progress, and collaborate through task assignments.
+TaskFlow is a task management application that allows users to manage projects and organize tasks within each project.
 
-The application is built using React and TypeScript,
-with mocked APIs powered by MSW.
+The application provides authentication, a dashboard, project management, task management, search and filtering, and customizable appearance.
 
-## 2. Project Goals
+## 2. Functional Requirements
 
-- Provide a simple authentication experience.
-- Allow users to manage their projects.
-- Allow users to create, update, and delete tasks.
-- Support task search and filtering.
-- Provide a clear overview of project and task progress.
-- Build a maintainable and reusable frontend architecture.
+### Authentication
 
-## 3. Functional Requirements
+- **FR-01:** The system shall allow users to create an account.
+- **FR-02:** The system shall allow registered users to sign in.
+- **FR-03:** The system shall allow users to submit a password-reset request.
+- **FR-04:** The system shall allow authenticated users to log out.
+- **FR-05:** The system shall restrict protected application pages to authenticated users.
 
-### 3.1 Authentication
+### Dashboard and Project Management
 
-- FR-01: Users can create an account.
-- FR-02: Users can sign in.
-- FR-03: Users can request a password reset.
-- FR-04: Authenticated users can log out.
-- FR-05: Protected pages require authentication.
+- **FR-06:** The system shall provide a dashboard after successful authentication.
+- **FR-07:** The dashboard shall display project information and progress summaries.
+- **FR-08:** The system shall allow users to view their projects.
+- **FR-09:** The system shall allow users to create projects.
+- **FR-10:** The system shall allow users to update existing projects.
+- **FR-11:** The system shall allow users to delete projects.
+- **FR-12:** The system shall allow users to open a project and view its tasks.
 
-### 3.2 Dashboard & Project Management
+### Task Management
 
-- FR-06: Users can view their projects.
-- FR-07: Users can create a project.
-- FR-08: Users can edit a project.
-- FR-09: Users can delete a project.
-- FR-10: Each project displays its related tasks.
-- FR-11: Users can view project completion progress.
+- **FR-13:** The system shall allow users to create tasks within a project.
+- **FR-14:** The system shall allow users to update existing tasks.
+- **FR-15:** The system shall allow users to delete tasks.
+- **FR-16:** Each task shall support the following information:
+  - Title
+  - Description
+  - Due date
+  - Priority
+  - Assignee
+  - Status
+- **FR-17:** The system shall support the following task statuses:
+  - To Do
+  - In Progress
+  - Done
+- **FR-18:** The system shall allow users to search tasks by title or description.
+- **FR-19:** The system shall allow users to filter tasks by status, priority, and assignee.
 
-### 3.3 Task Management
+## 3. Bonus Features
 
-- FR-12: Users can create tasks within a project.
-- FR-13: Users can edit existing tasks.
-- FR-14: Users can delete tasks.
-- FR-15: Users can search tasks by title and description.
-- FR-16: Users can filter tasks by priority.
-- FR-17: Users can filter tasks by assignee. The filter uses the assigned
-  user's ID.
-- FR-18: Users can update task status.
+- **BF-01:** The dashboard shall display project progress information.
+- **BF-02:** The application shall support Light and Dark themes.
+- **BF-03:** The application shall allow users to select an accent color from the available palette.
 
-### 3.4 Task Attributes
+### Theme Behavior
 
-Each task must contain:
-
-- Title
-- Description
-- Due date
-- Priority: Low / Medium / High
-- Assignee name for display
-- Status: To Do / In Progress / Done
-
-### 3.5 Bonus Features
-
-- BF-01: Display project/task progress cards.
-- BF-02: Support Dark and Light themes.
+- The application shall use the system color-scheme preference when no explicit theme preference has been saved.
+- Users shall be able to switch between Light and Dark modes.
+- The application shall provide five accent colors: Indigo, Blue, Teal, Rose, and Amber.
+- Theme and accent-color selections shall be persisted in browser `localStorage`.
 
 ## 4. Non-Functional Requirements
 
-- NFR-01: Use reusable and maintainable components.
-- NFR-02: Use TypeScript for type safety.
-- NFR-03: Use SCSS for styling.
-- NFR-04: Use MSW for API mocking.
-- NFR-05: Add unit tests for important application logic.
-- NFR-06: Handle loading, error, and empty states.
-- NFR-07: Provide a responsive user interface.
-- NFR-08: Protect project data from unauthorized access.
+- **NFR-01 – Maintainability:** The application shall use a modular and reusable component structure.
+- **NFR-02 – Type Safety:** TypeScript shall be used for application code and data models.
+- **NFR-03 – Styling:** SCSS shall be used for styling and shared theme tokens.
+- **NFR-04 – API Mocking:** MSW shall provide mocked API endpoints for frontend development and testing.
+- **NFR-05 – Testing:** Important API methods, utilities, and UI behavior shall be covered by automated tests.
+- **NFR-06 – User Feedback:** The application shall provide appropriate loading, validation, empty, success, and error states.
+- **NFR-07 – Responsiveness:** The application shall support desktop and compact viewport layouts.
+- **NFR-08 – Data Access:** Mock API handlers shall enforce authentication and relevant resource ownership rules.
 
 ## 5. User Stories
 
-- As a user, I want to register and log in so I can access my workspace.
-- As a user, I want to create projects to organize my work.
-- As a user, I want to manage tasks inside each project.
-- As a user, I want to search and filter tasks to find them easily.
-- As a user, I want to track project progress to understand completion.
+### Authentication
 
-## 6. Acceptance Criteria
+- As a new user, I want to create an account so that I can access TaskFlow.
+- As a registered user, I want to sign in so that I can manage my projects and tasks.
+- As a user who cannot remember my password, I want to submit a password-reset request.
+- As an authenticated user, I want to log out securely.
 
-- A user cannot access protected pages without authentication.
-- A user can only manage their own projects.
-- Tasks belong to a specific project.
-- Search returns tasks matching the entered title or description.
-- Filters return tasks matching the selected criteria.
-- Invalid form data displays validation errors.
-- Deleting a project also removes its related tasks.
+### Projects
+
+- As a user, I want to view my projects so that I can organize my work.
+- As a user, I want to create, edit, and delete projects.
+- As a user, I want to open a project to manage its tasks.
+
+### Tasks
+
+- As a user, I want to create, edit, and delete tasks within a project.
+- As a user, I want to update task status and priority.
+- As a user, I want to search and filter tasks so that I can find relevant work quickly.
+
+### Dashboard and Appearance
+
+- As a user, I want to see project progress on my dashboard.
+- As a user, I want to switch between Light and Dark themes.
+- As a user, I want to choose an accent color and keep my appearance preferences between sessions.
+
+## 6. Scope Notes
+
+TaskFlow uses MSW to simulate backend API behavior. Authentication, project, task, and password-reset interactions are implemented against mocked endpoints.
+
+The password-reset requirement refers to submitting a reset request through the mocked flow; it does not imply integration with a real email delivery service.

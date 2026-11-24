@@ -1,3 +1,4 @@
+
 sequenceDiagram
     actor User
     participant UI as React Page or Component
@@ -20,3 +21,24 @@ sequenceDiagram
     API->>API: Map snake_case response to camelCase
     API-->>UI: Return frontend task
     UI-->>User: Update task list
+
+    Note over User,Data: Theme preference flow
+
+    actor ThemeUser as User
+    participant Shell as AppShell
+    participant Provider as ThemeProvider
+    participant Storage as localStorage
+
+    ThemeUser->>Shell: Select Dark mode
+    Shell->>Provider: toggleTheme()
+    Provider->>Provider: Update theme state
+    Provider->>Storage: Save taskflow_theme
+    Provider-->>Shell: Updated theme
+    Shell-->>ThemeUser: Apply Dark theme
+
+    ThemeUser->>Shell: Select accent color
+    Shell->>Provider: setAccentColor(color)
+    Provider->>Provider: Update accent state
+    Provider->>Storage: Save taskflow_accent
+    Provider-->>Shell: Updated accent color
+    Shell-->>ThemeUser: Apply selected accent

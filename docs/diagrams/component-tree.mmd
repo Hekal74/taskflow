@@ -1,17 +1,52 @@
-flowchart TD
-    App --> Auth[Authentication Pages]
-    App --> Protected[Protected Application]
 
-    Protected --> Layout[App Layout]
-    Layout --> Dashboard[Dashboard Page]
-    Layout --> Projects[Projects Page]
-    Layout --> ProjectDetails[Project Details Page]
+flowchart TD
+    App[App]
+
+    App --> ThemeProvider[ThemeProvider]
+    ThemeProvider --> AuthProvider[AuthProvider]
+    AuthProvider --> ApplicationRouter[ApplicationRouter]
+    ApplicationRouter --> Router[RouterProvider]
+
+    Router --> PublicAuth[PublicAuthRoutes]
+    Router --> ForgotPassword[ForgotPasswordPage]
+    Router --> Protected[ProtectedRoutes]
+
+    PublicAuth --> Login[LoginPage]
+    PublicAuth --> Register[RegisterPage]
+
+    Protected --> AppShell[AppShell]
+
+    AppShell --> Sidebar[Sidebar Section]
+    AppShell --> Header[Header Section]
+    AppShell --> Main[Main Content]
+
+    Sidebar --> Brand[TaskFlow Brand Link]
+    Sidebar --> Navigation[Dashboard / Projects Navigation]
+    Sidebar --> UserIdentity[User Identity]
+    Sidebar --> Logout[Logout Action]
+
+    Header --> SidebarToggle[Sidebar Toggle]
+    Header --> PageContext[Page Context]
+    Header --> ThemeToggle[Theme Toggle]
+    Header --> AccentPicker[Accent Color Picker]
+
+    Main --> Dashboard[DashboardPage]
+    Main --> Projects[ProjectsPage]
+    Main --> ProjectDetails[ProjectDetailsPage]
 
     Projects --> ProjectList[Project List]
-    Projects --> ProjectCard[Project Card]
-    Projects --> ProjectForm[Project Form]
+    Projects --> ProjectCard[ProjectCard]
+    Projects --> ProjectForm[ProjectForm]
 
-    ProjectDetails --> TaskList[Task List]
-    ProjectDetails --> TaskFilters[Task Filters]
-    ProjectDetails --> TaskForm[Task Form]
-    TaskList --> TaskCard[Task Card]
+    ProjectDetails --> TaskList[TaskList]
+    ProjectDetails --> TaskFilters[TaskFilters]
+    ProjectDetails --> TaskForm[TaskForm]
+    TaskList --> TaskCard[TaskCard]
+
+    classDef provider fill:#e8eaf6,stroke:#3949ab,color:#1a237e
+    classDef layout fill:#e0f2f1,stroke:#00897b,color:#004d40
+    classDef feature fill:#fff3e0,stroke:#ef6c00,color:#e65100
+
+    class ThemeProvider,AuthProvider provider
+    class AppShell,Sidebar,Header,Main layout
+    class Dashboard,Projects,ProjectDetails,Login,Register,ForgotPassword feature
