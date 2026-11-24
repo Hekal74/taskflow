@@ -1,0 +1,50 @@
+
+flowchart TD
+    User[User] --> App[TaskFlow React Application]
+
+    App --> ThemeProvider[ThemeProvider]
+    ThemeProvider --> AuthProvider[AuthProvider]
+    AuthProvider --> ApplicationRouter[ApplicationRouter]
+
+    ApplicationRouter --> Router[React Router]
+
+    Router --> PublicRoutes[Public Routes]
+    Router --> ProtectedRoutes[Protected Routes]
+
+    PublicRoutes --> AuthPages[Login and Register]
+    PublicRoutes --> ForgotPassword[Forgot Password]
+
+    ProtectedRoutes --> AppShell[AppShell]
+
+    AppShell --> Navigation[Sidebar Navigation]
+    AppShell --> Header[Header Controls]
+    AppShell --> PageContent[Page Content]
+
+    Header --> ThemeToggle[Light / Dark Toggle]
+    Header --> AccentPicker[Accent Color Picker]
+
+    PageContent --> Dashboard[Dashboard Page]
+    PageContent --> Projects[Projects Page]
+    PageContent --> ProjectDetails[Project Details Page]
+
+    Projects --> ProjectAPI[Projects API]
+    ProjectDetails --> TaskAPI[Tasks API]
+    AuthPages --> AuthAPI[Authentication API]
+    ForgotPassword --> AuthAPI
+
+    ProjectAPI --> APIClient[Centralized API Client]
+    TaskAPI --> APIClient
+    AuthAPI --> APIClient
+
+    APIClient --> Mapping[Request / Response Mapping]
+    Mapping --> MSW[MSW Mock API]
+
+    MSW --> AuthHandlers[Authentication Handlers]
+    MSW --> ProjectHandlers[Projects Handlers]
+    MSW --> TaskHandlers[Tasks Handlers]
+
+    AuthHandlers --> MockData[(Mock Data)]
+    ProjectHandlers --> MockData
+    TaskHandlers --> MockData
+
+    ThemeProvider --> Preferences[(Browser localStorage)]

@@ -1,233 +1,250 @@
 # TaskFlow
 
-A minimal but real task management system. Users can register, log in, create projects, add tasks, and assign them to team members.
+A modern task and project management application built with React and TypeScript. TaskFlow helps users organize projects, manage tasks, track progress, and customize their workspace.
 
----
+## Features
 
-## 🛠 Tech Stack
+### Authentication
 
-| Layer        | Technology |
-|-------------|-----------|
-| Frontend     | React 19.3.1 (Vite) |
-| Routing      | React Router v7.14.0 |
-| Mock API     | MSW (Mock Service Worker) |
-| Styling      | Custom CSS (no external UI libraries) |
-| State        | React Hooks (useState, useContext) |
-| Auth         | Mock JWT (localStorage) |
+- User registration and login.
+- Client-side form validation.
+- Session initialization and persistence.
+- Protected application routes.
+- Forgot Password request flow.
+- Logout functionality.
 
+### Dashboard & Projects
 
-**Mock API approach**: MSW intercepts real `fetch()` calls at the network level. The same `api.ts` file works against both MSW (dev) and a real backend (production) — no code changes needed.
+- Dashboard with project and task progress summaries.
+- View and manage projects.
+- Create, edit, and delete projects.
+- View project details and associated tasks.
+- Project progress tracking based on completed tasks.
 
----
+### Task Management
+
+- Create, edit, and delete tasks.
+- Organize tasks within projects.
+- Manage task status:
+  - To Do
+  - In Progress
+  - Done
+- Set task priority, assignee, and due date.
+- Search tasks by title and description.
+- Filter tasks by status, priority, and assignee.
+
+### Appearance & User Experience
+
+- Light and Dark themes.
+- System color-scheme preference detection.
+- Five accent colors:
+  - Indigo
+  - Blue
+  - Teal
+  - Rose
+  - Amber
+- Persisted theme and accent-color preferences.
+- Responsive application layout with sidebar navigation.
+- Loading, empty, validation, success, and error states.
+- Toast notifications for operation feedback.
+
+## Tech Stack
+
+| Layer             | Technology                  |
+| ----------------- | --------------------------- |
+| Frontend          | React 19                    |
+| Language          | TypeScript                  |
+| Build Tool        | Vite 8                      |
+| Routing           | React Router 7              |
+| Styling           | SCSS                        |
+| State Management  | React Hooks and Context API |
+| Mock API          | MSW 2                       |
+| Testing           | Jest 30                     |
+| Component Testing | React Testing Library       |
+| Type Checking     | TypeScript                  |
+| Linting           | ESLint 9                    |
 
 ## Getting Started
 
 ### Prerequisites
-- Node.ts 18+
+
+- Node.js (18+)
 - npm
 
-### Install
+### Installation
+
+Clone the repository:
+
+```bash
+git clone https://github.com/hekal74/taskflow.git
+cd taskflow
+```
+
+Install dependencies:
 
 ```bash
 npm install
 ```
 
-### Set up MSW service worker
+### MSW Setup
+
+TaskFlow uses Mock Service Worker to intercept API requests during development.
+
+The service worker is configured to use the `public` directory.
+
+If the service worker file is not already present, initialize it using:
 
 ```bash
 npx msw init public/ --save
 ```
 
-This copies `mockServiceWorker.js` into your `public/` folder. Only needed once.
+This command generates `public/mockServiceWorker.js`.
 
-### Run
+### Run the Application
 
 ```bash
 npm run dev
 ```
 
-App runs at `http://localhost:5173`  
-Mock API intercepts requests to `http://localhost:4000`
+Vite will display the local development URL in the terminal, usually:
+
+```text
+http://localhost:5173
+```
+
+## Available Scripts
+
+| Command                   | Description                          |
+| ------------------------- | ------------------------------------ |
+| `npm run dev`             | Start the Vite development server    |
+| `npm run build`           | Create a production build            |
+| `npm run preview`         | Preview the production build locally |
+| `npm run lint`            | Run ESLint                           |
+| `npm test -- --runInBand` | Run Jest tests sequentially          |
+
+## Architecture
+
+TaskFlow follows a modular, feature-oriented frontend architecture.
+
+### Application Structure
+
+- **ThemeProvider:** Manages theme and accent-color preferences.
+- **AuthProvider:** Manages authentication state and session initialization.
+- **ApplicationRouter:** Handles authentication initialization before rendering the router.
+- **ProtectedRoutes:** Restricts access to authenticated application pages.
+- **AppShell:** Provides the shared authenticated layout, navigation, user information, and appearance controls.
+
+### Feature Modules
+
+- **Authentication:** Login, registration, password-reset requests, and session management.
+- **Dashboard:** Workspace overview and project progress summaries.
+- **Projects:** Project listing and CRUD operations.
+- **Tasks:** Task management, search, and filtering.
+
+### API Communication
+
+The application uses a centralized API client to communicate with mocked backend endpoints.
+
+MSW intercepts HTTP requests and routes them to the corresponding handlers.
+
+The API layer handles frontend-to-API data mapping where required, keeping frontend models separate from the mocked API contract.
+
+For more details, see:
+
+- [Architecture](docs/architecture.md)
+- [Component Design](docs/component-design.md)
+- [Requirements](docs/requirements.md)
+
+## Mock API
+
+TaskFlow uses MSW 2 to simulate backend API behavior without requiring a real backend.
+
+MSW handlers cover authentication, projects, and tasks.
+
+The mocked API handles:
+
+- Request validation.
+- Authentication checks.
+- Resource ownership checks.
+- Mock data operations.
+- HTTP responses and error scenarios.
+
+The mock data is maintained by the MSW handlers, allowing the application to exercise realistic API workflows during development and testing.
+
+## Theme Preferences
+
+TaskFlow supports customizable appearance preferences.
+
+### Theme Modes
+
+- Light mode.
+- Dark mode.
+- Automatic system preference when no explicit theme has been saved.
+
+### Accent Colors
+
+Users can choose from five accent colors: Indigo, Blue, Teal, Rose, and Amber.
+
+Theme preferences are stored in browser `localStorage`:
+
+| Preference   | Storage Key       |
+| ------------ | ----------------- |
+| Theme mode   | `taskflow_theme`  |
+| Accent color | `taskflow_accent` |
+
+## Testing
+
+Run the test suite:
+
+```bash
+npm test -- --runInBand
+```
+
+The test suite covers important application behavior, including:
+
+- API client behavior and data mapping.
+- Task list utilities.
+- CRUD error-message handling.
+- Project card rendering and interactions.
+- Project form behavior and validation.
+- Task card rendering and interactions.
+- Theme provider behavior and preference persistence.
+
+## Project Structure
+
+```text
+src/
+├── api/
+├── app/
+│   ├── App.tsx
+│   ├── router.tsx
+│   └── AppShell.tsx
+├── components/
+├── features/
+│   ├── auth/
+│   ├── dashboard/
+│   └── projects/
+├── mocks/
+├── theme/
+├── styles/
+└── types/
+```
+
+The structure is organized around application infrastructure, shared UI, and feature-specific modules.
+
+## Future Backend Integration
+
+The current application uses MSW to simulate backend behavior.
+
+The API client provides a centralized place for HTTP communication and data mapping. Replacing the mocked API with a real backend will require configuring the actual API endpoint and ensuring that the backend follows the expected API contracts.
+
+MSW is intended for development and testing, not as a production backend.
 
 ---
 
-## Test Credentials
+## Author
 
-Log in immediately — no registration needed:
+**Eslam Mohamed Hekal**
 
-```
-Email:    test@example.com
-Password: password123
-```
-
-Click the **"Use test credentials"** hint on the login page to auto-fill.
-
----
-
-## Features
-
-### Authentication
-- Register / Login with full client-side validation
-- JWT stored in `localStorage` — persists across page refreshes
-- Protected routes — redirect to `/login` if unauthenticated
-- Auto-redirect to dashboard if already logged in
-
-### Projects
-- List, create, delete projects
-- Progress bar per project (% of done tasks)
-- Stats: total projects, tasks, completed, finished
-- Optimistic delete with revert on error
-- Loading and error states with retry
-
-### Tasks (Kanban Board)
-- Three status columns: **To Do**, **In Progress**, **Done**
-- Create tasks: title, description, status, priority, due date, assignee
-- **Edit tasks** via modal panel
-- **Drag and drop** between columns
-- **Optimistic UI** — all updates apply instantly, revert on API error
-- Task completion animation (green flash when moved to Done)
-- Overdue dates highlighted in red
-- Strikethrough on done tasks
-
-### Filtering & Search
-- Full-text search (title, description, assignee)
-- Filter by priority and assignee
-- Clear all filters
-
-### UX
-- Loading spinners on all async operations
-- Error states with retry buttons — no silent failures
-- Empty states on all views
-- 6 color themes (Rose, Ocean, Forest, Violet, Amber, Slate)
-- Fully responsive (375px mobile + 1280px desktop)
-
----
-
-## API Reference
-
-Base URL: `http://localhost:4000` (intercepted by MSW in development)
-
-All protected endpoints require: `Authorization: Bearer <token>`
-
-----
-## 🧠 Architecture Decisions
-
-### Mock API (MSW)
-- Intercepts real network requests
-- Same API works for mock and real backend
-- No code changes needed when switching environments
-
-### Optimistic UI
-- Updates UI instantly before API response
-- Rolls back on failure
-- Improves perceived performance
-
----
-## 🐳 Docker Note
-
-Docker configuration has been included as part of the assignment requirements.  
-However, due to local environment compatibility constraints, it could not be fully tested during development.
-
-The application has been thoroughly tested using the standard Node.js setup, and the Docker configuration is structured to work correctly in a compatible environment.
------
-### POST /auth/register
-
-```
-Request:  { "name": "Jane Doe", "email": "jane@example.com", "password": "secret123" }
-Response 201: { "token": "<jwt>", "user": { "id": "uuid", "name": "Jane Doe", "email": "jane@example.com" } }
-Error 400: { "error": "validation failed", "fields": { "email": "already taken" } }
-```
-
-### POST /auth/login
-
-```
-Request:  { "email": "jane@example.com", "password": "secret123" }
-Response 200: { "token": "<jwt>", "user": { "id": "uuid", "name": "Jane Doe", "email": "jane@example.com" } }
-Error 401: { "error": "unauthorized" }
-```
-
-### GET /auth/me
-
-```
-Response 200: { "id": "uuid", "name": "Jane Doe", "email": "jane@example.com" }
-Error 401: { "error": "unauthorized" }
-```
-
----
-
-### GET /projects
-
-```
-Response 200: { "projects": [ { "id": "uuid", "name": "...", "description": "...", "owner_id": "uuid", "created_at": "..." } ] }
-```
-
-### POST /projects
-
-```
-Request:  { "name": "New Project", "description": "Optional" }
-Response 201: { "id": "uuid", "name": "New Project", "description": "Optional", "owner_id": "uuid", "created_at": "..." }
-Error 400: { "error": "validation failed", "fields": { "name": "is required" } }
-```
-
-### GET /projects/:id
-
-```
-Response 200: { "id": "uuid", "name": "...", "tasks": [ /* task objects */ ] }
-Error 404: { "error": "not found" }
-Error 403: { "error": "forbidden" }
-```
-
-### PATCH /projects/:id
-
-```
-Request:  { "name": "Updated Name", "description": "Updated" }
-Response 200: { /* updated project */ }
-```
-
-### DELETE /projects/:id
-
-```
-Response 204: No Content
-```
-
----
-
-### GET /projects/:id/tasks?status=todo&assignee=uuid
-
-```
-Response 200: { "tasks": [ /* task objects */ ] }
-```
-
-### POST /projects/:id/tasks
-
-```
-Request:  { "title": "Design homepage", "description": "...", "priority": "high", "assignee_id": "uuid", "due_date": "2026-04-15" }
-Response 201: { "id": "uuid", "title": "...", "status": "todo", "priority": "high", ... }
-Error 400: { "error": "validation failed", "fields": { "title": "is required" } }
-```
-
-### PATCH /tasks/:id
-
-```
-Request:  { "status": "done", "priority": "low" }   (all fields optional)
-Response 200: { /* updated task */ }
-```
-
-### DELETE /tasks/:id
-
-```
-Response 204: No Content
-```
-
-## Connecting a Real Backend
-
-MSW only runs in development (`import.meta.env.PROD` check in `main.tsx`). In production builds, all fetch calls in `api.ts` hit the real server directly — no changes needed.
-
-```js
-// main.tsx
-async function enableMocking() {
-  if (import.meta.env.PROD) return; // ← MSW skipped in production
-  const { worker } = await import("./mocks/browser");
-  return worker.start();
-}
-```
+- GitHub: [hekal74](https://github.com/hekal74)
+- LinkedIn: [Eslam Hekal](https://www.linkedin.com/in/eslamhekal74/)
