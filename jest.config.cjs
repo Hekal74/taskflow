@@ -3,6 +3,9 @@ module.exports = {
   testEnvironment: 'node',
   extensionsToTreatAsEsm: ['.ts', '.tsx'],
   setupFilesAfterEnv: ['<rootDir>/src/test/setupTests.ts'],
+  moduleNameMapper: {
+    '\\.(css|scss)$': '<rootDir>/src/test/styleMock.cjs',
+  },
   transform: {
     '^.+\\.tsx?$': [
       'ts-jest',

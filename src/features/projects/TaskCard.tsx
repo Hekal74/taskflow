@@ -6,6 +6,8 @@ interface TaskCardProps {
   task: Task;
   onEdit: (task: Task) => void;
   onDelete: (task: Task) => void;
+  onStatusChange: (task: Task, status: Task['status']) => void;
+  isUpdatingStatus: boolean;
   currentUserId?: string;
   currentUserName?: string;
 }
@@ -20,6 +22,8 @@ function TaskCard({
   task,
   onEdit,
   onDelete,
+  onStatusChange,
+  isUpdatingStatus,
   currentUserId,
   currentUserName,
 }: TaskCardProps) {
@@ -30,11 +34,21 @@ function TaskCard({
           <h3>{task.title}</h3>
           <p>{task.description || 'No description provided.'}</p>
         </div>
-        <span
-          className={`task-badge task-badge--status task-badge--${task.status}`}
+        <select
+          className={`task-badge task-badge--status task-badge--${task.status} task-status-select`}
+          value={task.status}
+          disabled={isUpdatingStatus}
+          aria-label={`Change status for ${task.title}`}
+          onChange={(event) =>
+            onStatusChange(task, event.target.value as Task['status'])
+          }
         >
-          {statusLabels[task.status]}
-        </span>
+          {Object.entries(statusLabels).map(([status, label]) => (
+            <option key={status} value={status}>
+              {label}
+            </option>
+          ))}
+        </select>
       </div>
       <div className="task-card__details">
         <span className={`task-badge task-badge--priority task-badge--${task.priority}`}>

@@ -5,6 +5,7 @@ import {
   deleteTask,
   fetchProjectById,
   fetchTasks,
+  updateTask,
 } from '../../api/api';
 import { useAuth } from '../auth/AuthContext';
 import TaskCard from './TaskCard';
@@ -59,6 +60,9 @@ function ProjectDetails({ projectId }: { projectId: string }) {
   const [reloadKey, setReloadKey] = useState(0);
   const [taskForm, setTaskForm] = useState<Task | null | undefined>(undefined);
   const [filters, setFilters] = useState<TaskFilters>(initialTaskFilters);
+  const [updatingTaskIds, setUpdatingTaskIds] = useState<Set<string>>(
+    () => new Set(),
+  );
   const { toast, showToast } = useToast();
   const taskSummary = useMemo(() => getTaskSummary(tasks), [tasks]);
   const visibleTasks = useMemo(
@@ -135,6 +139,34 @@ function ProjectDetails({ projectId }: { projectId: string }) {
         getCrudErrorMessage(error, 'Failed to delete task. Please try again.'),
         'error',
       );
+    }
+  };
+
+  const handleTaskStatusChange = async (
+    task: Task,
+    status: Task['status'],
+  ) => {
+    if (task.status === status || updatingTaskIds.has(task.id)) return;
+
+    setUpdatingTaskIds((current) => new Set(current).add(task.id));
+
+    try {
+      const updatedTask = await updateTask(task.id, { status });
+      setTasks((current) =>
+        current.map((item) => (item.id === updatedTask.id ? updatedTask : item)),
+      );
+      showToast('Task status updated successfully', 'success');
+    } catch (error) {
+      showToast(
+        getCrudErrorMessage(error, 'Failed to update task status. Please try again.'),
+        'error',
+      );
+    } finally {
+      setUpdatingTaskIds((current) => {
+        const next = new Set(current);
+        next.delete(task.id);
+        return next;
+      });
     }
   };
 
@@ -363,6 +395,8 @@ function ProjectDetails({ projectId }: { projectId: string }) {
                   task={task}
                   onEdit={(selectedTask) => setTaskForm(selectedTask)}
                   onDelete={handleDeleteTask}
+                  onStatusChange={handleTaskStatusChange}
+                  isUpdatingStatus={updatingTaskIds.has(task.id)}
                   currentUserId={user?.id}
                   currentUserName={user?.name}
                 />
